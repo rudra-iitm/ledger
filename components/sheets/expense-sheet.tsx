@@ -140,8 +140,8 @@ export function ExpenseSheet({
         const id = addExpense(payload);
         if (pendingFiles.length > 0) {
           for (const file of pendingFiles) {
-            if (file.size > 5 * 1024 * 1024) {
-              toast.error(`${file.name} is larger than 5 MB and was skipped`);
+            if (file.size > 50 * 1024 * 1024) {
+              toast.error(`${file.name} is larger than 50 MB and was skipped`);
               continue;
             }
             await addAttachment(id, file);

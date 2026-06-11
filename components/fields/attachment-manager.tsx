@@ -49,8 +49,8 @@ export function AttachmentManager({
     setUploading(true);
     try {
       for (const file of Array.from(files)) {
-        if (file.size > 5 * 1024 * 1024) {
-          toast.error(`${file.name} is larger than 5 MB`);
+        if (file.size > 50 * 1024 * 1024) {
+          toast.error(`${file.name} is larger than 50 MB and was skipped`);
           continue;
         }
         await addAttachment(expenseId, file);
