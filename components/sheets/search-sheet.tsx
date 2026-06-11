@@ -69,7 +69,7 @@ export function SearchSheet({
         <SheetHeader>
           <SheetTitle>Search</SheetTitle>
         </SheetHeader>
-        <div className="flex items-center gap-2 rounded-2xl border border-input bg-card px-3.5 transition-colors focus-within:border-ring">
+        <div className="flex items-center gap-2 rounded-xl border border-input bg-card pl-4 pr-2 transition-all focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/40">
           <Search aria-hidden className="size-4 shrink-0 text-muted-foreground" />
           <input
             autoFocus
@@ -77,7 +77,7 @@ export function SearchSheet({
             placeholder="Expenses, categories, tags, groups"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            className="h-11 w-full bg-transparent text-base outline-none placeholder:text-muted-foreground"
+            className="h-11 w-full bg-transparent text-[15px] outline-none placeholder:text-muted-foreground"
           />
         </div>
 

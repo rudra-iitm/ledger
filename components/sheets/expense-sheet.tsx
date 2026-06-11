@@ -178,7 +178,7 @@ export function ExpenseSheet({
             void submit();
           }}
         >
-          <div className="flex items-end justify-center gap-1 rounded-2xl border border-border bg-card py-6">
+          <div className="flex items-end justify-center gap-1 rounded-2xl border border-border bg-card py-6 transition-all focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/40">
             <span className="pb-1 text-2xl font-medium text-muted-foreground">
               {currency}
             </span>
@@ -234,7 +234,7 @@ export function ExpenseSheet({
               <Label htmlFor="expense-date">Date</Label>
               <label
                 htmlFor="expense-date"
-                className="relative flex h-10 cursor-pointer items-center gap-2 rounded-xl border border-input bg-card px-3.5"
+                className="relative flex h-11 cursor-pointer items-center gap-2 rounded-xl border border-input bg-card px-4 transition-all focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/40"
               >
                 <CalendarDays
                   aria-hidden

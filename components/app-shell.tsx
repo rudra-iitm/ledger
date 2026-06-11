@@ -17,7 +17,7 @@ import {
   RefreshCw,
   Search,
   Settings,
-  Sparkles,
+  CalendarCheck,
   Users,
   Wallet,
 } from "lucide-react";
@@ -113,7 +113,7 @@ function Header({ title }: { title: string }) {
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
                 <Link href="/reviews">
-                  <Sparkles aria-hidden />
+                  <CalendarCheck aria-hidden />
                   Monthly Review
                 </Link>
               </DropdownMenuItem>

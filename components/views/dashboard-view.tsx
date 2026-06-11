@@ -3,12 +3,12 @@
 import Link from "next/link";
 import {
   CalendarClock,
+  CalendarCheck,
   ChevronRight,
   FileText,
   LayoutGrid,
   ReceiptText,
   RefreshCw,
-  Sparkles,
   Target,
   TriangleAlert,
   Users,
@@ -135,7 +135,7 @@ export function DashboardView() {
           { href: "/spaces", label: "Spaces", icon: LayoutGrid },
           { href: "/accounts", label: "Accounts", icon: Wallet },
           { href: "/subscriptions", label: "Subscriptions", icon: RefreshCw },
-          { href: "/reviews", label: "Monthly Review", icon: Sparkles },
+          { href: "/reviews", label: "Monthly Review", icon: CalendarCheck },
           { href: "/groups", label: "Groups", icon: Users },
           { href: "/recurring", label: "Recurring", icon: CalendarClock },
           { href: "/reports", label: "Reports", icon: FileText },
