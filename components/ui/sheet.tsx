@@ -41,6 +41,7 @@ const SheetContent = React.forwardRef<
     const onResize = () => {
       if (!localRef.current) return;
       const vv = window.visualViewport;
+      if (!vv) return;
       
       // Calculate how far the visual viewport is offset from the bottom of the layout viewport.
       // This ensures the drawer sticks to the keyboard perfectly on iOS PWAs.

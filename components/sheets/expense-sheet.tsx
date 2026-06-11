@@ -150,7 +150,7 @@ export function ExpenseSheet({
         toast.success("Expense added");
       }
       onClose();
-    } catch (e) {
+    } catch {
       toast.error("Failed to save expense or upload attachments");
     } finally {
       setIsSubmitting(false);
