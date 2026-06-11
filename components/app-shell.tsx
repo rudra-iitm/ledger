@@ -181,8 +181,9 @@ function TabBar() {
     <nav
       aria-label="Primary"
       className="fixed inset-x-0 bottom-0 z-40 border-t border-border/60 bg-background/90 backdrop-blur"
+      style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
     >
-      <div className="mx-auto flex h-16 w-full max-w-lg items-stretch px-3 pb-[env(safe-area-inset-bottom)]">
+      <div className="mx-auto flex h-16 w-full max-w-lg items-stretch px-3">
         {renderTab(first)}
         {renderTab(second)}
         <div className="flex flex-1 items-center justify-center">
