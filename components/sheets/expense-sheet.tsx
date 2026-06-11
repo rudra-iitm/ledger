@@ -326,11 +326,9 @@ export function ExpenseSheet({
                       multiple
                       className="hidden"
                       onChange={(event) => {
-                        if (event.target.files) {
-                          setPendingFiles((files) => [
-                            ...files,
-                            ...Array.from(event.target.files ?? []),
-                          ]);
+                        if (event.target.files && event.target.files.length > 0) {
+                          const selected = Array.from(event.target.files);
+                          setPendingFiles((files) => [...files, ...selected]);
                         }
                         event.target.value = "";
                       }}

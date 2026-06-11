@@ -33,7 +33,7 @@ function SheetContent({
       <DrawerPrimitive.Content
         data-slot="sheet-content"
         className={cn(
-          "fixed inset-x-0 bottom-0 z-50 mx-auto flex max-h-[92dvh] w-full max-w-lg flex-col rounded-t-3xl border border-border bg-popover outline-none",
+          "fixed inset-x-0 bottom-0 z-50 mx-auto flex max-h-[calc(100dvh-env(safe-area-inset-top)-1rem)] mt-[env(safe-area-inset-top)] w-full max-w-lg flex-col rounded-t-3xl border border-border bg-popover outline-none",
           className,
         )}
         {...props}
