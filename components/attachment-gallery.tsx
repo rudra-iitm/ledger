@@ -14,6 +14,7 @@ import type { Attachment } from "@/lib/domain/types";
 import {
   attachmentToDataUrl,
   downloadAttachment,
+  previewPdfNative,
   type AttachmentBlob,
 } from "@/lib/storage/attachments";
 import { useAppStore } from "@/lib/store/app-store";
@@ -29,6 +30,10 @@ export function AttachmentGallery({ attachments }: { attachments: Attachment[] }
     const blob = await getAttachment(attachment.id);
     if (!blob) {
       toast.error("Attachment unavailable");
+      return;
+    }
+    if (blob.mimeType === "application/pdf") {
+      previewPdfNative(blob);
       return;
     }
     setPreview({ attachment, blob });
@@ -80,6 +85,9 @@ export function AttachmentGallery({ attachments }: { attachments: Attachment[] }
             ) : (
               <div className="flex flex-col items-center gap-3 py-8 text-center">
                 <FileText aria-hidden className="size-10 text-muted-foreground" />
+                <p className="text-sm text-muted-foreground">
+                  Preview not available for this file type.
+                </p>
                 <Button
                   type="button"
                   variant="secondary"

@@ -50,3 +50,15 @@ export function downloadAttachment(name: string, blob: AttachmentBlob): void {
   link.click();
   link.remove();
 }
+
+export function previewPdfNative(blob: AttachmentBlob): void {
+  const binary = atob(blob.data);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  const fileBlob = new Blob([bytes], { type: "application/pdf" });
+  const url = URL.createObjectURL(fileBlob);
+  window.open(url, "_blank");
+  setTimeout(() => URL.revokeObjectURL(url), 60000);
+}

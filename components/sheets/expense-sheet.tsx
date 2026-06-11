@@ -63,6 +63,8 @@ export function ExpenseSheet({
   const [error, setError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   useEffect(() => {
     if (!open) return;
     if (expense) {
@@ -96,6 +98,7 @@ export function ExpenseSheet({
       setPendingFiles([]);
     }
     setError(null);
+    setIsSubmitting(false);
   }, [open, expense, defaults]);
 
   const onDescriptionChange = (value: string) => {
@@ -106,6 +109,7 @@ export function ExpenseSheet({
   };
 
   const submit = async () => {
+    if (isSubmitting) return;
     const parsedAmount = Number(amount);
     if (!description.trim()) {
       setError("Add a description");
@@ -127,17 +131,30 @@ export function ExpenseSheet({
       notes: notes.trim() || undefined,
     };
 
-    if (expense) {
-      updateExpense(expense.id, payload);
-      toast.success("Expense updated");
-    } else {
-      const id = addExpense(payload);
-      if (pendingFiles.length > 0) {
-        for (const file of pendingFiles) await addAttachment(id, file);
+    setIsSubmitting(true);
+    try {
+      if (expense) {
+        updateExpense(expense.id, payload);
+        toast.success("Expense updated");
+      } else {
+        const id = addExpense(payload);
+        if (pendingFiles.length > 0) {
+          for (const file of pendingFiles) {
+            if (file.size > 5 * 1024 * 1024) {
+              toast.error(`${file.name} is larger than 5 MB and was skipped`);
+              continue;
+            }
+            await addAttachment(id, file);
+          }
+        }
+        toast.success("Expense added");
       }
-      toast.success("Expense added");
+      onClose();
+    } catch (e) {
+      toast.error("Failed to save expense or upload attachments");
+    } finally {
+      setIsSubmitting(false);
     }
-    onClose();
   };
 
   const onDelete = () => {
@@ -330,7 +347,6 @@ export function ExpenseSheet({
                           const selected = Array.from(event.target.files);
                           setPendingFiles((files) => [...files, ...selected]);
                         }
-                        event.target.value = "";
                       }}
                     />
                     <Button
@@ -357,14 +373,15 @@ export function ExpenseSheet({
           )}
 
           <div className="flex flex-col gap-2 pt-1">
-            <Button type="submit" size="lg">
-              {expense ? "Save changes" : "Add expense"}
+            <Button type="submit" size="lg" disabled={isSubmitting}>
+              {isSubmitting ? "Saving..." : expense ? "Save changes" : "Add expense"}
             </Button>
             {expense && (
               <Button
                 type="button"
                 variant="destructive"
                 size="lg"
+                disabled={isSubmitting}
                 onClick={onDelete}
               >
                 Delete expense

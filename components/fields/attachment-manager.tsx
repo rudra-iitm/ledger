@@ -14,6 +14,7 @@ import type { Attachment } from "@/lib/domain/types";
 import {
   attachmentToDataUrl,
   downloadAttachment,
+  previewPdfNative,
   type AttachmentBlob,
 } from "@/lib/storage/attachments";
 import { useAppStore } from "@/lib/store/app-store";
@@ -67,6 +68,10 @@ export function AttachmentManager({
     const blob = await getAttachment(attachment.id);
     if (!blob) {
       toast.error("Attachment unavailable");
+      return;
+    }
+    if (blob.mimeType === "application/pdf") {
+      previewPdfNative(blob);
       return;
     }
     setPreview({ attachment, blob });
