@@ -1,0 +1,12 @@
+name = "ledger-auth"
+main = "src/index.ts"
+compatibility_date = "2024-11-01"
+
+# Set the origin(s) allowed to call this worker (comma-separated).
+# Use your deployed site origin in production, e.g. "https://<user>.github.io".
+[vars]
+ALLOWED_ORIGINS = "*"
+
+# Secrets (do NOT put these here). Set them with:
+#   npx wrangler secret put GITHUB_CLIENT_ID
+#   npx wrangler secret put GITHUB_CLIENT_SECRET

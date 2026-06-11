@@ -1,11 +1,14 @@
 import { authConfig } from "./config";
+import { createId } from "../domain/id";
 import type { AuthSession } from "./types";
 
 const STATE_KEY = "ledger:oauth-state";
+const REDIRECT_KEY = "ledger:oauth-redirect";
 
 export function startGitHubLogin(redirectUri: string): void {
-  const state = crypto.randomUUID();
+  const state = createId();
   window.sessionStorage.setItem(STATE_KEY, state);
+  window.sessionStorage.setItem(REDIRECT_KEY, redirectUri);
   const url = new URL("https://github.com/login/oauth/authorize");
   url.searchParams.set("client_id", authConfig.githubClientId);
   url.searchParams.set("redirect_uri", redirectUri);
@@ -19,7 +22,9 @@ export async function completeGitHubLogin(
   state: string,
 ): Promise<AuthSession> {
   const expectedState = window.sessionStorage.getItem(STATE_KEY);
+  const redirectUri = window.sessionStorage.getItem(REDIRECT_KEY);
   window.sessionStorage.removeItem(STATE_KEY);
+  window.sessionStorage.removeItem(REDIRECT_KEY);
   if (!expectedState || expectedState !== state) {
     throw new Error("OAuth state mismatch. Please try signing in again.");
   }
@@ -27,7 +32,7 @@ export async function completeGitHubLogin(
   const response = await fetch(authConfig.githubTokenExchangeUrl, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ code }),
+    body: JSON.stringify({ code, redirect_uri: redirectUri ?? undefined }),
   });
   if (!response.ok) {
     throw new Error("Token exchange failed. Please try signing in again.");

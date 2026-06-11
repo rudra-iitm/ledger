@@ -1,5 +1,37 @@
-import type { Group, Settlement } from "./types";
-import { fromMinorUnits, splitEqually, toMinorUnits } from "./money";
+import type { Group, GroupExpense, Settlement } from "./types";
+import {
+  fromMinorUnits,
+  splitByPercentage,
+  splitEqually,
+  toMinorUnits,
+} from "./money";
+
+export function shareAmounts(expense: GroupExpense): Map<string, number> {
+  const participants = expense.splitAmong;
+  const shares = new Map<string, number>();
+  if (participants.length === 0) return shares;
+
+  if (expense.splitType === "equal") {
+    const values = splitEqually(expense.amount, participants.length);
+    participants.forEach((id, index) => shares.set(id, values[index]));
+    return shares;
+  }
+
+  if (expense.splitType === "percentage") {
+    const percentages = participants.map(
+      (id) => expense.shares.find((s) => s.memberId === id)?.value ?? 0,
+    );
+    const values = splitByPercentage(expense.amount, percentages);
+    participants.forEach((id, index) => shares.set(id, values[index]));
+    return shares;
+  }
+
+  participants.forEach((id) => {
+    const value = expense.shares.find((s) => s.memberId === id)?.value ?? 0;
+    shares.set(id, value);
+  });
+  return shares;
+}
 
 export function computeBalances(group: Group): Map<string, number> {
   const balances = new Map<string, number>(
@@ -7,17 +39,11 @@ export function computeBalances(group: Group): Map<string, number> {
   );
 
   for (const expense of group.expenses) {
-    const participants = expense.splitAmong.filter((id) => balances.has(id));
-    if (participants.length === 0) continue;
-
-    const shares = splitEqually(expense.amount, participants.length);
-    participants.forEach((memberId, index) => {
-      balances.set(
-        memberId,
-        (balances.get(memberId) ?? 0) - toMinorUnits(shares[index]),
-      );
-    });
-
+    const shares = shareAmounts(expense);
+    for (const [memberId, share] of shares) {
+      if (!balances.has(memberId)) continue;
+      balances.set(memberId, (balances.get(memberId) ?? 0) - toMinorUnits(share));
+    }
     if (balances.has(expense.paidBy)) {
       balances.set(
         expense.paidBy,

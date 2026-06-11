@@ -2,7 +2,9 @@ import {
   Car,
   GraduationCap,
   HeartPulse,
+  LineChart,
   MoreHorizontal,
+  Popcorn,
   Receipt,
   ShoppingBag,
   UtensilsCrossed,
@@ -18,6 +20,8 @@ const ICONS: Record<Category, LucideIcon> = {
   Bills: Receipt,
   Health: HeartPulse,
   Education: GraduationCap,
+  Entertainment: Popcorn,
+  Investments: LineChart,
   Other: MoreHorizontal,
 };
 

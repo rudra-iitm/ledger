@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Sheet,
@@ -12,6 +11,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import { CATEGORIES, type Category } from "@/lib/domain/types";
 import { useAppStore } from "@/lib/store/app-store";
 
 export function BudgetSheet({
@@ -21,20 +21,40 @@ export function BudgetSheet({
   open: boolean;
   onClose: () => void;
 }) {
-  const monthlyBudget = useAppStore((state) => state.data.budgets.monthlyBudget);
+  const budgets = useAppStore((state) => state.data.budgets);
+  const currency = useAppStore((state) => state.data.settings.currency);
   const setMonthlyBudget = useAppStore((state) => state.setMonthlyBudget);
-  const [value, setValue] = useState("");
+  const setCategoryBudget = useAppStore((state) => state.setCategoryBudget);
+
+  const [overall, setOverall] = useState("");
+  const [categoryValues, setCategoryValues] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    if (open) setValue(monthlyBudget > 0 ? String(monthlyBudget) : "");
-  }, [open, monthlyBudget]);
-
-  const parsed = Number(value);
-  const valid = Number.isFinite(parsed) && parsed >= 0 && value !== "";
+    if (!open) return;
+    setOverall(budgets.monthlyBudget > 0 ? String(budgets.monthlyBudget) : "");
+    const next: Record<string, string> = {};
+    for (const category of CATEGORIES) {
+      const value = budgets.categoryBudgets[category];
+      if (value && value > 0) next[category] = String(value);
+    }
+    setCategoryValues(next);
+  }, [open, budgets]);
 
   const submit = () => {
-    if (!valid) return;
-    setMonthlyBudget(parsed);
+    const parsedOverall = Number(overall);
+    setMonthlyBudget(
+      overall !== "" && Number.isFinite(parsedOverall) && parsedOverall >= 0
+        ? parsedOverall
+        : 0,
+    );
+    for (const category of CATEGORIES) {
+      const raw = categoryValues[category];
+      const parsed = Number(raw);
+      setCategoryBudget(
+        category,
+        raw && Number.isFinite(parsed) && parsed > 0 ? parsed : null,
+      );
+    }
     toast.success("Budget updated");
     onClose();
   };
@@ -43,33 +63,69 @@ export function BudgetSheet({
     <Sheet open={open} onOpenChange={(next) => !next && onClose()}>
       <SheetContent>
         <SheetHeader>
-          <SheetTitle>Monthly budget</SheetTitle>
+          <SheetTitle>Budgets</SheetTitle>
           <SheetDescription>
-            One overall spending limit for each month.
+            Set an overall monthly limit and optional per-category limits.
           </SheetDescription>
         </SheetHeader>
         <form
-          className="flex flex-col gap-4"
+          className="flex flex-col gap-5"
           onSubmit={(event) => {
             event.preventDefault();
             submit();
           }}
         >
           <div className="flex flex-col gap-2">
-            <Label htmlFor="budget-amount">Budget</Label>
-            <Input
-              id="budget-amount"
-              type="number"
-              inputMode="decimal"
-              step="0.01"
-              min="0"
-              placeholder="30000"
-              value={value}
-              onChange={(event) => setValue(event.target.value)}
-            />
+            <Label htmlFor="budget-overall">Monthly budget</Label>
+            <div className="flex items-center gap-2 rounded-xl border border-input bg-card px-3.5">
+              <span className="text-muted-foreground">{currency}</span>
+              <input
+                id="budget-overall"
+                type="number"
+                inputMode="decimal"
+                min="0"
+                step="0.01"
+                placeholder="30000"
+                value={overall}
+                onChange={(event) => setOverall(event.target.value)}
+                className="h-10 w-full bg-transparent text-base outline-none"
+              />
+            </div>
           </div>
-          <Button type="submit" size="lg" disabled={!valid}>
-            Save budget
+
+          <div className="flex flex-col gap-2">
+            <Label>Category budgets</Label>
+            <div className="flex flex-col gap-2">
+              {CATEGORIES.map((category: Category) => (
+                <div
+                  key={category}
+                  className="flex items-center gap-3 rounded-xl border border-border bg-card px-3.5 py-1.5"
+                >
+                  <span className="flex-1 text-[15px]">{category}</span>
+                  <span className="text-sm text-muted-foreground">{currency}</span>
+                  <input
+                    aria-label={`${category} budget`}
+                    type="number"
+                    inputMode="decimal"
+                    min="0"
+                    step="0.01"
+                    placeholder="0"
+                    value={categoryValues[category] ?? ""}
+                    onChange={(event) =>
+                      setCategoryValues((current) => ({
+                        ...current,
+                        [category]: event.target.value,
+                      }))
+                    }
+                    className="h-9 w-24 bg-transparent text-right text-base outline-none"
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <Button type="submit" size="lg">
+            Save budgets
           </Button>
         </form>
       </SheetContent>

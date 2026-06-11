@@ -3,15 +3,23 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+  BarChart3,
   CalendarClock,
+  CalendarDays,
   CircleUserRound,
   CloudAlert,
+  FileText,
   House,
+  LayoutGrid,
   LogOut,
   Plus,
   ReceiptText,
+  RefreshCw,
+  Search,
   Settings,
+  Sparkles,
   Users,
+  Wallet,
 } from "lucide-react";
 import { AuthGate } from "@/components/auth-gate";
 import { SheetProvider, useSheets } from "@/components/sheets/sheet-context";
@@ -26,33 +34,45 @@ import { cn } from "@/lib/utils";
 
 const TABS = [
   { href: "/", label: "Home", icon: House },
+  { href: "/calendar", label: "Calendar", icon: CalendarDays },
+  { href: "/analytics", label: "Analytics", icon: BarChart3 },
   { href: "/expenses", label: "Expenses", icon: ReceiptText },
-  { href: "/groups", label: "Groups", icon: Users },
-  { href: "/recurring", label: "Recurring", icon: CalendarClock },
 ] as const;
 
 function Header({ title }: { title: string }) {
   const session = useAppStore((state) => state.session);
   const syncStatus = useAppStore((state) => state.syncStatus);
   const signOut = useAppStore((state) => state.signOut);
+  const sheets = useSheets();
 
   return (
-    <header className="sticky top-0 z-40 border-b border-border/60 bg-background/90 backdrop-blur">
+    <header
+      className="sticky top-0 z-40 border-b border-border/60 bg-background/90 backdrop-blur"
+      style={{ paddingTop: "env(safe-area-inset-top)" }}
+    >
       <div className="mx-auto flex h-14 w-full max-w-lg items-center justify-between px-5">
         <h1 className="text-lg font-semibold tracking-tight">{title}</h1>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           {syncStatus === "saving" && (
             <span
               role="status"
               aria-label="Saving"
-              className="size-2 animate-pulse rounded-full bg-muted-foreground"
+              className="mr-1 size-2 animate-pulse rounded-full bg-muted-foreground"
             />
           )}
           {syncStatus === "error" && (
-            <span role="status" aria-label="Sync failed">
+            <span role="status" aria-label="Sync failed" className="mr-1">
               <CloudAlert aria-hidden className="size-4.5 text-destructive" />
             </span>
           )}
+          <button
+            type="button"
+            aria-label="Search"
+            onClick={() => sheets.openSearch()}
+            className="flex size-9 items-center justify-center rounded-full text-muted-foreground outline-none transition-colors hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <Search aria-hidden className="size-5" />
+          </button>
           <DropdownMenu>
             <DropdownMenuTrigger
               aria-label="Account menu"
@@ -73,6 +93,48 @@ function Header({ title }: { title: string }) {
               )}
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
+              <DropdownMenuItem asChild>
+                <Link href="/spaces">
+                  <LayoutGrid aria-hidden />
+                  Spaces
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href="/accounts">
+                  <Wallet aria-hidden />
+                  Accounts
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href="/subscriptions">
+                  <RefreshCw aria-hidden />
+                  Subscriptions
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href="/reviews">
+                  <Sparkles aria-hidden />
+                  Monthly Review
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href="/groups">
+                  <Users aria-hidden />
+                  Groups
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href="/recurring">
+                  <CalendarClock aria-hidden />
+                  Recurring
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href="/reports">
+                  <FileText aria-hidden />
+                  Reports
+                </Link>
+              </DropdownMenuItem>
               <DropdownMenuItem asChild>
                 <Link href="/settings">
                   <Settings aria-hidden />

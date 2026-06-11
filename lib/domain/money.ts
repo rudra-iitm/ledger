@@ -26,3 +26,20 @@ export function splitEqually(amount: number, ways: number): number[] {
     fromMinorUnits(base + (i < remainder ? 1 : 0)),
   );
 }
+
+export function splitByPercentage(amount: number, percentages: number[]): number[] {
+  const totalMinor = toMinorUnits(amount);
+  const raw = percentages.map((pct) => Math.floor((totalMinor * pct) / 100));
+  let assigned = raw.reduce((sum, value) => sum + value, 0);
+  let index = 0;
+  while (assigned < totalMinor && percentages.length > 0) {
+    raw[index % raw.length] += 1;
+    assigned += 1;
+    index += 1;
+  }
+  return raw.map(fromMinorUnits);
+}
+
+export function normalizeShares(values: number[]): number[] {
+  return values.map((value) => roundMoney(value));
+}

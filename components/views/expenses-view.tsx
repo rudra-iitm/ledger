@@ -1,62 +1,253 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { ReceiptText, Search } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { ArrowDownUp, ReceiptText, Search, SlidersHorizontal } from "lucide-react";
 import { EmptyState } from "@/components/empty-state";
 import { ExpenseRow } from "@/components/expense-row";
+import {
+  TimeRangePicker,
+  type TimeFilterValue,
+} from "@/components/fields/time-range-picker";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { CATEGORIES, type Category } from "@/lib/domain/types";
+import { filterExpenses } from "@/lib/domain/analytics";
+import { resolveRange } from "@/lib/domain/time-ranges";
 import { formatDisplayDate } from "@/lib/domain/dates";
+import { formatMoney } from "@/lib/domain/money";
 import { useAppStore } from "@/lib/store/app-store";
 import { cn } from "@/lib/utils";
 
+type SortKey = "date-desc" | "date-asc" | "amount-desc" | "amount-asc";
+
+const SORT_LABELS: Record<SortKey, string> = {
+  "date-desc": "Newest first",
+  "date-asc": "Oldest first",
+  "amount-desc": "Highest amount",
+  "amount-asc": "Lowest amount",
+};
+
+const PAGE_SIZE = 25;
+const ALL_ACCOUNTS = "__all__";
+const ALL_SPACES = "__all_spaces__";
+
 export function ExpensesView() {
   const expenses = useAppStore((state) => state.data.expenses);
+  const settings = useAppStore((state) => state.data.settings);
+  const accounts = useAppStore((state) => state.data.accounts);
+  const spaces = useAppStore((state) => state.data.spaces);
+
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState<Category | null>(null);
+  const [accountId, setAccountId] = useState(ALL_ACCOUNTS);
+  const [spaceId, setSpaceId] = useState(ALL_SPACES);
+  const [activeTags, setActiveTags] = useState<string[]>([]);
+  const [sort, setSort] = useState<SortKey>("date-desc");
+  const [time, setTime] = useState<TimeFilterValue>({
+    preset: "all",
+    custom: { start: null, end: null },
+  });
+  const [visible, setVisible] = useState(PAGE_SIZE);
+  const sentinelRef = useRef<HTMLDivElement>(null);
+
+  const range = useMemo(() => resolveRange(time.preset, time.custom), [time]);
 
   const filtered = useMemo(() => {
-    const normalized = query.trim().toLowerCase();
-    return [...expenses]
-      .filter((expense) => {
-        if (category && expense.category !== category) return false;
-        if (
-          normalized &&
-          !expense.description.toLowerCase().includes(normalized)
-        ) {
-          return false;
-        }
-        return true;
-      })
-      .sort((a, b) =>
-        a.date === b.date
-          ? b.createdAt.localeCompare(a.createdAt)
-          : b.date.localeCompare(a.date),
-      );
-  }, [expenses, query, category]);
+    const result = filterExpenses(expenses, {
+      range,
+      category,
+      accountId: accountId === ALL_ACCOUNTS ? null : accountId,
+      spaceId: spaceId === ALL_SPACES ? null : spaceId,
+      tags: activeTags,
+      query,
+    });
+    return result.sort((a, b) => {
+      switch (sort) {
+        case "date-asc":
+          return a.date === b.date
+            ? a.createdAt.localeCompare(b.createdAt)
+            : a.date.localeCompare(b.date);
+        case "amount-desc":
+          return b.amount - a.amount;
+        case "amount-asc":
+          return a.amount - b.amount;
+        case "date-desc":
+        default:
+          return a.date === b.date
+            ? b.createdAt.localeCompare(a.createdAt)
+            : b.date.localeCompare(a.date);
+      }
+    });
+  }, [expenses, range, category, accountId, spaceId, activeTags, query, sort]);
 
-  const groupedByDate = useMemo(() => {
-    const groups = new Map<string, typeof filtered>();
-    for (const expense of filtered) {
+  useEffect(() => {
+    setVisible(PAGE_SIZE);
+  }, [range, category, accountId, spaceId, activeTags, query, sort]);
+
+  const page = filtered.slice(0, visible);
+  const hasMore = visible < filtered.length;
+
+  useEffect(() => {
+    if (!hasMore) return;
+    const node = sentinelRef.current;
+    if (!node) return;
+    const observer = new IntersectionObserver((entries) => {
+      if (entries[0]?.isIntersecting) {
+        setVisible((current) => current + PAGE_SIZE);
+      }
+    });
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [hasMore]);
+
+  const grouped = useMemo(() => {
+    if (sort !== "date-desc" && sort !== "date-asc") return null;
+    const groups = new Map<string, typeof page>();
+    for (const expense of page) {
       const list = groups.get(expense.date) ?? [];
       list.push(expense);
       groups.set(expense.date, list);
     }
     return Array.from(groups.entries());
-  }, [filtered]);
+  }, [page, sort]);
 
   return (
-    <div className="flex flex-col gap-5">
+    <div className="flex flex-col gap-4">
       <div className="flex items-center gap-2 rounded-2xl border border-input bg-card px-3.5 transition-colors focus-within:border-ring">
         <Search aria-hidden className="size-4 shrink-0 text-muted-foreground" />
         <input
           type="search"
           aria-label="Search expenses"
-          placeholder="Search expenses"
+          placeholder="Search description, tag, or note"
           autoComplete="off"
           value={query}
           onChange={(event) => setQuery(event.target.value)}
           className="h-10 w-full bg-transparent text-base outline-none placeholder:text-muted-foreground"
         />
+      </div>
+
+      <div className="flex items-center gap-2">
+        <TimeRangePicker value={time} onChange={setTime} />
+        <Popover>
+          <PopoverTrigger className="inline-flex size-9 items-center justify-center rounded-full border border-border bg-card outline-none transition-colors hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring">
+            <SlidersHorizontal aria-hidden className="size-4" />
+            <span className="sr-only">Filters</span>
+          </PopoverTrigger>
+          <PopoverContent align="end" className="w-64">
+            <div className="flex flex-col gap-3">
+              <div className="flex flex-col gap-1.5">
+                <span className="text-[13px] font-medium text-muted-foreground">
+                  Account
+                </span>
+                <Select value={accountId} onValueChange={setAccountId}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={ALL_ACCOUNTS}>All accounts</SelectItem>
+                    {accounts
+                      .filter((account) => !account.archived)
+                      .map((account) => (
+                        <SelectItem key={account.id} value={account.id}>
+                          {account.icon} {account.name}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              {spaces.filter((space) => !space.archived).length > 0 && (
+                <div className="flex flex-col gap-1.5">
+                  <span className="text-[13px] font-medium text-muted-foreground">
+                    Space
+                  </span>
+                  <Select value={spaceId} onValueChange={setSpaceId}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={ALL_SPACES}>All spaces</SelectItem>
+                      {spaces
+                        .filter((space) => !space.archived)
+                        .map((space) => (
+                          <SelectItem key={space.id} value={space.id}>
+                            {space.icon} {space.name}
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+              {settings.tags.length > 0 && (
+                <div className="flex flex-col gap-1.5">
+                  <span className="text-[13px] font-medium text-muted-foreground">
+                    Tags
+                  </span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {settings.tags.map((tag) => {
+                      const active = activeTags.includes(tag);
+                      return (
+                        <button
+                          key={tag}
+                          type="button"
+                          aria-pressed={active}
+                          onClick={() =>
+                            setActiveTags((current) =>
+                              active
+                                ? current.filter((item) => item !== tag)
+                                : [...current, tag],
+                            )
+                          }
+                          className={cn(
+                            "rounded-full border px-2.5 py-1 text-[13px] outline-none transition-colors",
+                            active
+                              ? "border-transparent bg-primary text-primary-foreground"
+                              : "border-border text-muted-foreground",
+                          )}
+                        >
+                          {tag}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+          </PopoverContent>
+        </Popover>
+        <Popover>
+          <PopoverTrigger className="inline-flex size-9 items-center justify-center rounded-full border border-border bg-card outline-none transition-colors hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring">
+            <ArrowDownUp aria-hidden className="size-4" />
+            <span className="sr-only">Sort</span>
+          </PopoverTrigger>
+          <PopoverContent align="end" className="w-52">
+            <div className="flex flex-col">
+              {(Object.keys(SORT_LABELS) as SortKey[]).map((key) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => setSort(key)}
+                  className={cn(
+                    "rounded-lg px-3 py-2 text-left text-sm outline-none transition-colors hover:bg-accent",
+                    sort === key && "text-foreground",
+                    sort !== key && "text-muted-foreground",
+                  )}
+                >
+                  {SORT_LABELS[key]}
+                </button>
+              ))}
+            </div>
+          </PopoverContent>
+        </Popover>
       </div>
 
       <div
@@ -73,7 +264,7 @@ export function ExpensesView() {
               aria-pressed={selected}
               onClick={() => setCategory(item)}
               className={cn(
-                "shrink-0 rounded-full border px-4 py-1.5 text-sm font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
+                "shrink-0 rounded-full border px-3.5 py-1.5 text-[13px] font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
                 selected
                   ? "border-transparent bg-primary text-primary-foreground"
                   : "border-border bg-card text-muted-foreground hover:text-foreground",
@@ -85,33 +276,53 @@ export function ExpensesView() {
         })}
       </div>
 
-      {groupedByDate.length === 0 ? (
+      {filtered.length === 0 ? (
         <EmptyState
           icon={ReceiptText}
-          title={
-            expenses.length === 0 ? "No expenses yet" : "Nothing matches"
-          }
+          title={expenses.length === 0 ? "No expenses yet" : "Nothing matches"}
           description={
             expenses.length === 0
               ? "Tap the plus button to add your first expense."
-              : "Try a different search or category filter."
+              : "Try a different search, time range, or filter."
           }
         />
       ) : (
-        <div className="flex flex-col gap-5">
-          {groupedByDate.map(([date, items]) => (
-            <section key={date} aria-label={formatDisplayDate(date)}>
-              <h2 className="mb-1 px-0.5 text-sm font-medium text-muted-foreground">
-                {formatDisplayDate(date)}
-              </h2>
-              <ul className="-mx-2 flex flex-col">
-                {items.map((expense) => (
-                  <ExpenseRow key={expense.id} expense={expense} />
-                ))}
-              </ul>
-            </section>
-          ))}
-        </div>
+        <>
+          <p className="px-1 text-[13px] text-muted-foreground">
+            {filtered.length} {filtered.length === 1 ? "expense" : "expenses"} ·{" "}
+            {formatMoney(
+              filtered.reduce((sum, expense) => sum + expense.amount, 0),
+              settings.currency,
+            )}
+          </p>
+
+          {grouped ? (
+            <div className="flex flex-col gap-5">
+              {grouped.map(([date, items]) => (
+                <section key={date} aria-label={formatDisplayDate(date)}>
+                  <h2 className="mb-1 px-0.5 text-[13px] font-medium text-muted-foreground">
+                    {formatDisplayDate(date)}
+                  </h2>
+                  <ul className="-mx-2 flex flex-col">
+                    {items.map((expense) => (
+                      <ExpenseRow key={expense.id} expense={expense} />
+                    ))}
+                  </ul>
+                </section>
+              ))}
+            </div>
+          ) : (
+            <ul className="-mx-2 flex flex-col">
+              {page.map((expense) => (
+                <ExpenseRow key={expense.id} expense={expense} />
+              ))}
+            </ul>
+          )}
+
+          {hasMore && (
+            <div ref={sentinelRef} className="h-10" aria-hidden />
+          )}
+        </>
       )}
     </div>
   );

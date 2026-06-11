@@ -1,18 +1,26 @@
 import { z } from "zod";
 import type { DataFile, StorageAdapter } from "./adapter";
+import { migrate } from "./migrations";
 import {
+  accountsFileSchema,
   budgetsSchema,
+  DEFAULT_ACCOUNTS,
   DEFAULT_BUDGETS,
   DEFAULT_SETTINGS,
   expensesFileSchema,
   groupsFileSchema,
   recurringFileSchema,
   settingsSchema,
+  spacesFileSchema,
+  subscriptionsFileSchema,
+  type Account,
   type Budgets,
   type Expense,
   type Group,
   type RecurringExpense,
   type Settings,
+  type Space,
+  type Subscription,
 } from "../domain/types";
 
 export interface LedgerData {
@@ -21,6 +29,9 @@ export interface LedgerData {
   groups: Group[];
   budgets: Budgets;
   settings: Settings;
+  accounts: Account[];
+  spaces: Space[];
+  subscriptions: Subscription[];
 }
 
 export const EMPTY_DATA: LedgerData = {
@@ -29,6 +40,9 @@ export const EMPTY_DATA: LedgerData = {
   groups: [],
   budgets: DEFAULT_BUDGETS,
   settings: DEFAULT_SETTINGS,
+  accounts: DEFAULT_ACCOUNTS,
+  spaces: [],
+  subscriptions: [],
 };
 
 const FILE_SCHEMAS = {
@@ -37,6 +51,9 @@ const FILE_SCHEMAS = {
   groups: groupsFileSchema,
   budgets: budgetsSchema,
   settings: settingsSchema,
+  accounts: accountsFileSchema,
+  spaces: spacesFileSchema,
+  subscriptions: subscriptionsFileSchema,
 } satisfies Record<DataFile, z.ZodType>;
 
 export class LedgerRepository {
@@ -48,20 +65,42 @@ export class LedgerRepository {
   ): Promise<LedgerData[K]> {
     const raw = await this.adapter.readFile(file);
     if (raw === null) return fallback;
-    const parsed = FILE_SCHEMAS[file].safeParse(JSON.parse(raw));
+    const migrated = migrate(file, JSON.parse(raw));
+    const parsed = FILE_SCHEMAS[file].safeParse(migrated);
     if (!parsed.success) return fallback;
     return parsed.data as LedgerData[K];
   }
 
   async loadAll(): Promise<LedgerData> {
-    const [expenses, recurring, groups, budgets, settings] = await Promise.all([
+    const [
+      expenses,
+      recurring,
+      groups,
+      budgets,
+      settings,
+      accounts,
+      spaces,
+      subscriptions,
+    ] = await Promise.all([
       this.readCollection("expenses", EMPTY_DATA.expenses),
       this.readCollection("recurring", EMPTY_DATA.recurring),
       this.readCollection("groups", EMPTY_DATA.groups),
       this.readCollection("budgets", EMPTY_DATA.budgets),
       this.readCollection("settings", EMPTY_DATA.settings),
+      this.readCollection("accounts", EMPTY_DATA.accounts),
+      this.readCollection("spaces", EMPTY_DATA.spaces),
+      this.readCollection("subscriptions", EMPTY_DATA.subscriptions),
     ]);
-    return { expenses, recurring, groups, budgets, settings };
+    return {
+      expenses,
+      recurring,
+      groups,
+      budgets,
+      settings,
+      accounts,
+      spaces,
+      subscriptions,
+    };
   }
 
   async save<K extends DataFile>(file: K, data: LedgerData[K]): Promise<void> {

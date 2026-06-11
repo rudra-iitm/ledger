@@ -11,12 +11,19 @@ const geistSans = Geist({
 export const metadata: Metadata = {
   title: "Ledger",
   description: "Personal budgets, expenses, and bill splitting",
+  manifest: `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/manifest.webmanifest`,
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "Ledger",
+  },
 };
 
 export const viewport: Viewport = {
   themeColor: "#000000",
   width: "device-width",
   initialScale: 1,
+  maximumScale: 1,
   viewportFit: "cover",
 };
 

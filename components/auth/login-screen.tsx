@@ -7,12 +7,12 @@ import { GitHubIcon } from "@/components/icons";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -95,7 +95,10 @@ export function LoginScreen() {
   };
 
   return (
-    <main className="mx-auto flex w-full max-w-md flex-1 flex-col justify-between px-6 pb-[max(2rem,env(safe-area-inset-bottom))] pt-24">
+    <main
+      className="mx-auto flex w-full max-w-md flex-1 flex-col justify-between px-6 pb-[max(2rem,env(safe-area-inset-bottom))]"
+      style={{ paddingTop: "calc(env(safe-area-inset-top) + 4rem)" }}
+    >
       <div>
         <div className="mb-8 flex size-14 items-center justify-center rounded-2xl border border-border bg-card">
           <Wallet aria-hidden className="size-7" />
@@ -132,15 +135,15 @@ export function LoginScreen() {
         </button>
       </div>
 
-      <Dialog open={tokenDialogOpen} onOpenChange={setTokenDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>GitHub personal access token</DialogTitle>
-            <DialogDescription>
-              Use a fine-grained token with repository read and write access.
-              It stays on this device.
-            </DialogDescription>
-          </DialogHeader>
+      <Sheet open={tokenDialogOpen} onOpenChange={setTokenDialogOpen}>
+        <SheetContent>
+          <SheetHeader>
+            <SheetTitle>GitHub personal access token</SheetTitle>
+            <SheetDescription>
+              Use a fine-grained token with repository read and write access. It
+              stays on this device.
+            </SheetDescription>
+          </SheetHeader>
           <form
             className="flex flex-col gap-4"
             onSubmit={(event) => {
@@ -159,12 +162,12 @@ export function LoginScreen() {
                 onChange={(event) => setToken(event.target.value)}
               />
             </div>
-            <Button type="submit" disabled={busy || !token.trim()}>
+            <Button type="submit" size="lg" disabled={busy || !token.trim()}>
               Sign in
             </Button>
           </form>
-        </DialogContent>
-      </Dialog>
+        </SheetContent>
+      </Sheet>
     </main>
   );
 }

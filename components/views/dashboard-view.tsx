@@ -1,13 +1,26 @@
 "use client";
 
 import Link from "next/link";
-import { ChevronRight, ReceiptText, Target } from "lucide-react";
+import {
+  CalendarClock,
+  ChevronRight,
+  FileText,
+  LayoutGrid,
+  ReceiptText,
+  RefreshCw,
+  Sparkles,
+  Target,
+  TriangleAlert,
+  Users,
+  Wallet,
+} from "lucide-react";
 import { ExpenseRow } from "@/components/expense-row";
 import { EmptyState } from "@/components/empty-state";
+import { InsightsStrip } from "@/components/insights-strip";
 import { QuickAddInput } from "@/components/quick-add-input";
 import { useSheets } from "@/components/sheets/sheet-context";
 import { Progress } from "@/components/ui/progress";
-import { budgetSummary } from "@/lib/domain/budget";
+import { budgetSummary, categoryBudgetSummaries } from "@/lib/domain/budget";
 import { currentMonth, formatDisplayMonth } from "@/lib/domain/dates";
 import { formatMoney } from "@/lib/domain/money";
 import { useAppStore } from "@/lib/store/app-store";
@@ -15,14 +28,16 @@ import { cn } from "@/lib/utils";
 
 export function DashboardView() {
   const expenses = useAppStore((state) => state.data.expenses);
-  const monthlyBudget = useAppStore(
-    (state) => state.data.budgets.monthlyBudget,
-  );
+  const budgets = useAppStore((state) => state.data.budgets);
+  const monthlyBudget = budgets.monthlyBudget;
   const currency = useAppStore((state) => state.data.settings.currency);
   const sheets = useSheets();
 
   const month = currentMonth();
   const summary = budgetSummary(expenses, monthlyBudget, month);
+  const categoryAlerts = categoryBudgetSummaries(expenses, budgets, month).filter(
+    (item) => item.nearLimit || item.overBudget,
+  );
   const recent = [...expenses]
     .sort((a, b) =>
       a.date === b.date
@@ -77,6 +92,63 @@ export function DashboardView() {
 
       <section aria-label="Quick add">
         <QuickAddInput />
+      </section>
+
+      {categoryAlerts.length > 0 && (
+        <section aria-label="Budget alerts" className="flex flex-col gap-2">
+          {categoryAlerts.map((alert) => (
+            <button
+              key={alert.category}
+              type="button"
+              onClick={() => sheets.openBudget()}
+              className={cn(
+                "flex items-center gap-3 rounded-2xl border px-4 py-3 text-left outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
+                alert.overBudget
+                  ? "border-destructive/40 bg-destructive/10"
+                  : "border-amber-400/30 bg-amber-400/10",
+              )}
+            >
+              <TriangleAlert
+                aria-hidden
+                className={cn(
+                  "size-4 shrink-0",
+                  alert.overBudget ? "text-destructive" : "text-amber-400",
+                )}
+              />
+              <span className="flex-1 text-[14px]">
+                {alert.category}{" "}
+                {alert.overBudget ? "over budget" : "near its limit"}
+              </span>
+              <span className="text-[13px] tabular-nums text-muted-foreground">
+                {formatMoney(alert.spent, currency)} /{" "}
+                {formatMoney(alert.budget, currency)}
+              </span>
+            </button>
+          ))}
+        </section>
+      )}
+
+      <InsightsStrip />
+
+      <section aria-label="Shortcuts" className="grid grid-cols-2 gap-3">
+        {[
+          { href: "/spaces", label: "Spaces", icon: LayoutGrid },
+          { href: "/accounts", label: "Accounts", icon: Wallet },
+          { href: "/subscriptions", label: "Subscriptions", icon: RefreshCw },
+          { href: "/reviews", label: "Monthly Review", icon: Sparkles },
+          { href: "/groups", label: "Groups", icon: Users },
+          { href: "/recurring", label: "Recurring", icon: CalendarClock },
+          { href: "/reports", label: "Reports", icon: FileText },
+        ].map(({ href, label, icon: Icon }) => (
+          <Link
+            key={href}
+            href={href}
+            className="flex items-center gap-3 rounded-2xl border border-border bg-card px-4 py-3.5 outline-none transition-colors hover:bg-accent/50 focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <Icon aria-hidden className="size-5 text-muted-foreground" />
+            <span className="text-[14px] font-medium">{label}</span>
+          </Link>
+        ))}
       </section>
 
       <section aria-label="Recent expenses">

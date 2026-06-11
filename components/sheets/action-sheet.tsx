@@ -1,6 +1,13 @@
 "use client";
 
-import { CalendarClock, ReceiptText, Target, Users } from "lucide-react";
+import {
+  CalendarClock,
+  LayoutGrid,
+  ReceiptText,
+  RefreshCw,
+  Target,
+  Users,
+} from "lucide-react";
 import {
   Sheet,
   SheetContent,
@@ -18,9 +25,21 @@ const ACTIONS = [
     action: "expense",
   },
   {
+    icon: RefreshCw,
+    label: "New subscription",
+    description: "Netflix, Spotify, and more",
+    action: "subscription",
+  },
+  {
+    icon: LayoutGrid,
+    label: "New space",
+    description: "Group expenses by trip or project",
+    action: "space",
+  },
+  {
     icon: CalendarClock,
     label: "Add recurring",
-    description: "Rent, subscriptions, bills",
+    description: "Rent, bills, instalments",
     action: "recurring",
   },
   {
@@ -48,6 +67,8 @@ export function ActionSheet({
 
   const handle = (action: (typeof ACTIONS)[number]["action"]) => {
     if (action === "expense") sheets.openExpense();
+    if (action === "subscription") sheets.openSubscription();
+    if (action === "space") sheets.openSpace();
     if (action === "recurring") sheets.openRecurring();
     if (action === "group") sheets.openGroup();
     if (action === "budget") sheets.openBudget();
