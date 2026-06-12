@@ -171,7 +171,9 @@ export default function NewLendBorrowPage() {
                 <DateField value={date} onChange={setDate} />
               </div>
               <div className="flex flex-col gap-2">
-                <Label>Due Date (Optional)</Label>
+                <Label className="flex items-center gap-1 whitespace-nowrap">
+                  Due Date <span className="text-[11px] font-normal text-muted-foreground">(Optional)</span>
+                </Label>
                 <div className="relative">
                   <CalendarDays className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground z-10 pointer-events-none" />
                   <Input
@@ -185,7 +187,9 @@ export default function NewLendBorrowPage() {
             </div>
 
             <div className="flex flex-col gap-2">
-              <Label>Source Account (Optional)</Label>
+              <Label className="flex items-center gap-1">
+                Source Account <span className="text-[11px] font-normal text-muted-foreground">(Optional)</span>
+              </Label>
               <AccountSelect value={accountId} onChange={(v) => setAccountId(v || "")} />
               <span className="text-[12px] text-muted-foreground">
                 For tracking only. No ledger transaction will be created.
@@ -193,7 +197,9 @@ export default function NewLendBorrowPage() {
             </div>
 
             <div className="flex flex-col gap-2">
-              <Label>Notes (Optional)</Label>
+              <Label className="flex items-center gap-1">
+                Notes <span className="text-[11px] font-normal text-muted-foreground">(Optional)</span>
+              </Label>
               <Textarea
                 placeholder="Additional details..."
                 value={notes}
@@ -202,7 +208,9 @@ export default function NewLendBorrowPage() {
               />
             </div>
             <div className="flex flex-col gap-2">
-              <Label>Attachments (Optional)</Label>
+              <Label className="flex items-center gap-1">
+                Attachments <span className="text-[11px] font-normal text-muted-foreground">(Optional)</span>
+              </Label>
               {pendingFiles.length > 0 && (
                 <ul className="flex flex-col gap-1.5">
                   {pendingFiles.map((file, index) => (

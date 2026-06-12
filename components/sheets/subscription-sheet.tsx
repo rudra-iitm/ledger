@@ -233,7 +233,9 @@ export function SubscriptionSheet({
           </div>
 
           <div className="flex flex-col gap-2">
-            <Label htmlFor="subscription-notes">Notes (optional)</Label>
+            <Label htmlFor="subscription-notes" className="flex items-center gap-1">
+              Notes <span className="text-[11px] font-normal text-muted-foreground">(Optional)</span>
+            </Label>
             <Textarea
               id="subscription-notes"
               placeholder="Shared family plan"

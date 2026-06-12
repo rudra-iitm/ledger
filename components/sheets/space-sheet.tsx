@@ -103,7 +103,9 @@ export function SpaceSheet({
           </div>
 
           <div className="flex flex-col gap-2">
-            <Label htmlFor="space-budget">Budget (optional)</Label>
+            <Label htmlFor="space-budget" className="flex items-center gap-1">
+              Budget <span className="text-[11px] font-normal text-muted-foreground">(Optional)</span>
+            </Label>
             <div className="flex items-center gap-2 rounded-xl border border-input bg-card px-3.5">
               <span className="text-muted-foreground">{currency}</span>
               <input
@@ -121,7 +123,9 @@ export function SpaceSheet({
           </div>
 
           <div className="flex flex-col gap-2">
-            <Label htmlFor="space-description">Description (optional)</Label>
+            <Label htmlFor="space-description" className="flex items-center gap-1">
+              Description <span className="text-[11px] font-normal text-muted-foreground">(Optional)</span>
+            </Label>
             <Textarea
               id="space-description"
               placeholder="What is this space for?"
