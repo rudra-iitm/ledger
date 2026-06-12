@@ -3,9 +3,9 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import {
+  CalendarCheck,
   ChevronLeft,
   ChevronRight,
-  Sparkles,
   TrendingDown,
   TrendingUp,
 } from "lucide-react";
@@ -73,7 +73,7 @@ export function ReviewsView() {
 
       {!review.hasData ? (
         <EmptyState
-          icon={Sparkles}
+          icon={CalendarCheck}
           title="No data this month"
           description="Once you record expenses this month, your review appears here."
         />

@@ -9,8 +9,8 @@ export default function manifest(): MetadataRoute.Manifest {
     description: "Personal budgets, expenses, and bill splitting",
     start_url: `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/`,
     display: "standalone",
-    background_color: "#000000",
-    theme_color: "#000000",
+    background_color: "#0b0b0b",
+    theme_color: "#0b0b0b",
     icons: [
       {
         src: `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/icon.svg`,
