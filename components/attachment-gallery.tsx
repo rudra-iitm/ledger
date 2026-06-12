@@ -27,7 +27,7 @@ export function AttachmentGallery({ attachments }: { attachments: Attachment[] }
   } | null>(null);
 
   const open = async (attachment: Attachment) => {
-    const blob = await getAttachment(attachment.id);
+    const blob = await getAttachment(attachment.id, attachment.mimeType);
     if (!blob) {
       toast.error("Attachment unavailable");
       return;

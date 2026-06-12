@@ -51,29 +51,36 @@ export function AttachmentManager({
   const onPick = async (files: FileList | null) => {
     if (!files || files.length === 0) return;
     setUploading(true);
-    try {
-      for (const file of Array.from(files)) {
-        if (file.size > 50 * 1024 * 1024) {
-          toast.error(`${file.name} is larger than 50 MB and was skipped`);
-          continue;
-        }
+    let added = 0;
+    for (const file of Array.from(files)) {
+      if (file.size > 50 * 1024 * 1024) {
+        toast.error(`${file.name} is larger than 50 MB and was skipped`);
+        continue;
+      }
+      try {
         if (type === "lendBorrow") {
           await addLendBorrowAttachment(itemId, file);
         } else {
           await addAttachment(itemId, file);
         }
+        added += 1;
+      } catch (error) {
+        const detail =
+          error instanceof Error && error.message
+            ? ` (${error.message})`
+            : "";
+        toast.error(`Could not upload ${file.name}${detail}`);
       }
-      toast.success("Attachment added");
-    } catch {
-      toast.error("Could not add attachment");
-    } finally {
-      setUploading(false);
-      if (inputRef.current) inputRef.current.value = "";
     }
+    if (added > 0) {
+      toast.success(added === 1 ? "Attachment added" : `${added} attachments added`);
+    }
+    setUploading(false);
+    if (inputRef.current) inputRef.current.value = "";
   };
 
   const openPreview = async (attachment: Attachment) => {
-    const blob = await getAttachment(attachment.id);
+    const blob = await getAttachment(attachment.id, attachment.mimeType);
     if (!blob) {
       toast.error("Attachment unavailable");
       return;
@@ -119,8 +126,9 @@ export function AttachmentManager({
                   type="button"
                   aria-label={`Download ${attachment.name}`}
                   onClick={async () => {
-                    const blob = await getAttachment(attachment.id);
+                    const blob = await getAttachment(attachment.id, attachment.mimeType);
                     if (blob) downloadAttachment(attachment.name, blob);
+                    else toast.error("Attachment unavailable");
                   }}
                   className="rounded-lg p-1.5 text-muted-foreground outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
                 >

@@ -7,8 +7,8 @@ export interface AttachmentBlob {
 
 export interface AttachmentStore {
   put(id: string, blob: AttachmentBlob): Promise<void>;
-  get(id: string): Promise<AttachmentBlob | null>;
-  remove(id: string): Promise<void>;
+  get(id: string, mimeType?: string): Promise<AttachmentBlob | null>;
+  remove(id: string, mimeType?: string): Promise<void>;
 }
 
 const KEY_PREFIX = "ledger:attachment:";

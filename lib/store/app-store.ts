@@ -57,7 +57,10 @@ interface AppState {
   updateExpense: (id: string, patch: Partial<Omit<Expense, "id">>) => void;
   deleteExpense: (id: string) => void;
   addAttachment: (expenseId: string, file: File) => Promise<void>;
-  getAttachment: (attachmentId: string) => Promise<AttachmentBlob | null>;
+  getAttachment: (
+    attachmentId: string,
+    mimeType?: string,
+  ) => Promise<AttachmentBlob | null>;
   removeAttachment: (expenseId: string, attachmentId: string) => Promise<void>;
   setMonthlyBudget: (amount: number) => void;
   setCategoryBudget: (category: Category, amount: number | null) => void;
@@ -294,7 +297,7 @@ export const useAppStore = create<AppState>((set, get) => {
       if (target && attachmentStore) {
         const store = attachmentStore;
         for (const attachment of target.attachments) {
-          void store.remove(attachment.id);
+          void store.remove(attachment.id, attachment.mimeType);
         }
       }
       mutate("expenses", ({ expenses }) =>
@@ -322,13 +325,18 @@ export const useAppStore = create<AppState>((set, get) => {
       );
     },
 
-    getAttachment: async (attachmentId) => {
+    getAttachment: async (attachmentId, mimeType) => {
       if (!attachmentStore) return null;
-      return attachmentStore.get(attachmentId);
+      return attachmentStore.get(attachmentId, mimeType);
     },
 
     removeAttachment: async (expenseId, attachmentId) => {
-      if (attachmentStore) await attachmentStore.remove(attachmentId);
+      if (attachmentStore) {
+        const meta = get()
+          .data.expenses.find((item) => item.id === expenseId)
+          ?.attachments.find((attachment) => attachment.id === attachmentId);
+        await attachmentStore.remove(attachmentId, meta?.mimeType);
+      }
       mutate("expenses", ({ expenses }) =>
         expenses.map((item) =>
           item.id === expenseId
@@ -606,10 +614,18 @@ export const useAppStore = create<AppState>((set, get) => {
         ),
       ),
 
-    deleteLendBorrow: (id) =>
+    deleteLendBorrow: (id) => {
+      const target = get().data.lendBorrows.find((item) => item.id === id);
+      if (target && attachmentStore) {
+        const store = attachmentStore;
+        for (const attachment of target.attachments) {
+          void store.remove(attachment.id, attachment.mimeType);
+        }
+      }
       mutate("lendBorrows", ({ lendBorrows }) =>
         lendBorrows.filter((item) => item.id !== id),
-      ),
+      );
+    },
 
     addLendBorrowRepayment: (lendBorrowId, repayment) => {
       mutate("lendBorrows", ({ lendBorrows }) =>
@@ -667,7 +683,12 @@ export const useAppStore = create<AppState>((set, get) => {
     },
 
     removeLendBorrowAttachment: async (id, attachmentId) => {
-      if (attachmentStore) await attachmentStore.remove(attachmentId);
+      if (attachmentStore) {
+        const meta = get()
+          .data.lendBorrows.find((item) => item.id === id)
+          ?.attachments.find((attachment) => attachment.id === attachmentId);
+        await attachmentStore.remove(attachmentId, meta?.mimeType);
+      }
       mutate("lendBorrows", ({ lendBorrows }) =>
         lendBorrows.map((item) =>
           item.id === id
