@@ -96,7 +96,12 @@ export function AccountDetailView() {
       )}
 
       <div className="grid grid-cols-3 gap-3">
-        <Stat label="Balance" value={formatMoney(account.balance, currency)} />
+        <Stat 
+          label={account.type === "credit_card" ? "Outstanding" : "Balance"} 
+          value={account.type === "credit_card" && account.balance > 0
+            ? formatMoney(-account.balance, currency)
+            : formatMoney(account.balance, currency)} 
+        />
         <Stat
           label="This month"
           value={formatMoney(summary.monthlySpending, currency)}

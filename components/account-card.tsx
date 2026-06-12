@@ -30,7 +30,6 @@ export function AccountCard({ account, currency, className }: AccountCardProps) 
       }}
     >
       
-      {/* Card Header */}
       <div className="relative flex items-start justify-between">
         <InstitutionIcon 
           institution={institution} 
@@ -47,18 +46,18 @@ export function AccountCard({ account, currency, className }: AccountCardProps) 
         </div>
       </div>
 
-      {/* Card Footer (Balance) */}
       <div className="relative mt-12 flex items-end justify-between">
         <div className="flex flex-col gap-0.5">
           <span className="text-[12px] font-medium tracking-wide text-white/40 uppercase">
-            Available Balance
+            {account.type === "credit_card" ? "Outstanding Balance" : "Available Balance"}
           </span>
           <span className="text-3xl font-semibold tracking-tight text-white tabular-nums">
-            {formatMoney(account.balance, currency)}
+            {account.type === "credit_card" && account.balance > 0
+              ? formatMoney(-account.balance, currency)
+              : formatMoney(account.balance, currency)}
           </span>
         </div>
         
-        {/* Decorative Card Chip / Logo Space */}
         {institution?.type === "network" || institution?.type === "credit_card" ? (
            <div className="size-8 rounded bg-white/10" />
         ) : null}
