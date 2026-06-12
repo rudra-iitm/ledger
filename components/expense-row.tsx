@@ -130,7 +130,7 @@ export function ExpenseRow({ expense }: { expense: Expense }) {
     >
       <div
         aria-hidden={offset === 0}
-        className="absolute inset-y-0 right-0 flex"
+        className={cn("absolute inset-y-0 right-0 flex", offset === 0 && "invisible")}
         style={{ width: ACTIONS_WIDTH }}
       >
         <button
