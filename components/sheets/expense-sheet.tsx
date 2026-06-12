@@ -4,6 +4,9 @@ import { useEffect, useRef, useState } from "react";
 import { Paperclip, Tag as TagIcon, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { BrandIcon } from "@/components/brand-icon";
+import { resolveBrand } from "@/lib/brands/registry";
+import { formatMoney } from "@/lib/domain/money";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -165,11 +168,26 @@ export function ExpenseSheet({
     onClose();
   };
 
+  const brand = resolveBrand(`${description} ${notes || ""}`);
+  const allExpenses = useAppStore((state) => state.data.expenses);
+  const brandExpenses = brand ? allExpenses.filter(e => resolveBrand(`${e.description} ${e.notes || ""}`)?.id === brand.id) : [];
+  const brandTotalSpent = brandExpenses.reduce((sum, e) => sum + e.amount, 0);
+
   return (
     <Sheet open={open} onOpenChange={(value) => !value && onClose()}>
       <SheetContent>
-        <SheetHeader>
-          <SheetTitle>{expense ? "Edit expense" : "Add expense"}</SheetTitle>
+        <SheetHeader className={brand && expense ? "items-center pt-2 pb-6" : ""}>
+          {brand && expense ? (
+            <>
+              <BrandIcon brand={brand} fallbackCategory={category} size="lg" className="mb-2 size-20 rounded-[20px]" />
+              <SheetTitle className="text-2xl font-semibold tracking-tight">{brand.name}</SheetTitle>
+              <p className="text-sm font-medium text-muted-foreground mt-1">
+                {brandExpenses.length} transactions · Total spent: {formatMoney(brandTotalSpent, currency)}
+              </p>
+            </>
+          ) : (
+            <SheetTitle>{expense ? "Edit expense" : "Add expense"}</SheetTitle>
+          )}
         </SheetHeader>
 
         <form

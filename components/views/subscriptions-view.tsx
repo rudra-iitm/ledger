@@ -5,8 +5,10 @@ import { Plus, RefreshCw, TriangleAlert } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/empty-state";
+import { BrandIcon } from "@/components/brand-icon";
 import { useSheets } from "@/components/sheets/sheet-context";
 import { BILLING_LABELS } from "@/components/sheets/subscription-sheet";
+import { resolveBrand } from "@/lib/brands/registry";
 import {
   monthlyCost,
   totalAnnualCost,
@@ -103,18 +105,24 @@ export function SubscriptionsView() {
             All subscriptions
           </h3>
           <ul className="flex flex-col gap-2">
-            {sorted.map((subscription) => (
-              <li key={subscription.id}>
+            {sorted.map((subscription) => {
+              const brand = resolveBrand(subscription.name);
+              return (
+              <li 
+                key={subscription.id}
+                style={brand ? { "--brand-color": brand.accentColor } as React.CSSProperties : undefined}
+              >
                 <button
                   type="button"
                   onClick={() => sheets.openSubscription(subscription)}
                   className={cn(
-                    "flex w-full items-center gap-3 rounded-2xl border border-border bg-card shadow-soft px-4 py-3.5 text-left outline-none transition-colors hover:bg-accent/50 focus-visible:ring-2 focus-visible:ring-ring",
+                    "flex w-full items-center gap-3.5 rounded-2xl border border-border bg-card shadow-soft px-4 py-3.5 text-left outline-none transition-colors hover:bg-[var(--brand-color,var(--accent))]/5 focus-visible:ring-2 focus-visible:ring-[var(--brand-color,var(--ring))]",
                     !subscription.active && "opacity-60",
                   )}
                 >
+                  <BrandIcon brand={brand} fallbackCategory={subscription.category} size="md" />
                   <span className="flex min-w-0 flex-1 flex-col">
-                    <span className="truncate text-[15px] font-medium">
+                    <span className="truncate text-[16px] font-medium">
                       {subscription.name}
                     </span>
                     <span className="text-[13px] text-muted-foreground">
@@ -134,7 +142,8 @@ export function SubscriptionsView() {
                   {!subscription.active && <Badge variant="outline">Paused</Badge>}
                 </button>
               </li>
-            ))}
+              );
+            })}
           </ul>
         </section>
       )}

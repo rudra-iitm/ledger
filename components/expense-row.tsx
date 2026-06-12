@@ -3,7 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import { CalendarClock, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import { CategoryIcon } from "@/components/category-icon";
+import { BrandIcon } from "@/components/brand-icon";
+import { resolveBrand } from "@/lib/brands/registry";
 import type { Expense } from "@/lib/domain/types";
 import { formatDisplayDate } from "@/lib/domain/dates";
 import { formatMoney } from "@/lib/domain/money";
@@ -120,8 +121,13 @@ export function ExpenseRow({ expense }: { expense: Expense }) {
     toast.success("Expense deleted");
   };
 
+  const brand = resolveBrand(`${expense.description} ${expense.notes || ""}`);
+
   return (
-    <li className="relative overflow-hidden rounded-2xl">
+    <li 
+      className="relative overflow-hidden rounded-2xl"
+      style={brand ? { "--brand-color": brand.accentColor } as React.CSSProperties : undefined}
+    >
       <div
         aria-hidden={offset === 0}
         className="absolute inset-y-0 right-0 flex"
@@ -164,12 +170,12 @@ export function ExpenseRow({ expense }: { expense: Expense }) {
         <button
           type="button"
           onClick={onRowClick}
-          className="flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left outline-none transition-colors duration-200 hover:bg-accent/50 active:bg-accent/60 focus-visible:ring-2 focus-visible:ring-ring"
+          className="flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left outline-none transition-colors duration-200 hover:bg-[var(--brand-color,var(--accent))]/10 active:bg-[var(--brand-color,var(--accent))]/20 focus-visible:ring-2 focus-visible:ring-[var(--brand-color,var(--ring))]"
         >
-          <CategoryIcon category={expense.category} />
+          <BrandIcon brand={brand} fallbackCategory={expense.category} />
           <span className="flex min-w-0 flex-1 flex-col">
             <span className="flex items-center gap-1.5 truncate text-[15px] font-medium">
-              {expense.description}
+              {brand ? brand.name : expense.description}
               {expense.recurringId && (
                 <CalendarClock
                   aria-label="Recurring"

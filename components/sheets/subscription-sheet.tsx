@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { BrandIcon } from "@/components/brand-icon";
+import { resolveBrand } from "@/lib/brands/registry";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -113,16 +115,30 @@ export function SubscriptionSheet({
     onClose();
   };
 
+  const brand = resolveBrand(name);
+
   return (
     <Sheet open={open} onOpenChange={(value) => !value && onClose()}>
       <SheetContent>
-        <SheetHeader>
-          <SheetTitle>
-            {subscription ? "Edit subscription" : "New subscription"}
-          </SheetTitle>
-          <SheetDescription>
-            Renewals are added to your expenses automatically.
-          </SheetDescription>
+        <SheetHeader className={brand && subscription ? "items-center pt-2 pb-6" : ""}>
+          {brand && subscription ? (
+            <>
+              <BrandIcon brand={brand} fallbackCategory={category} size="lg" className="mb-2 size-20 rounded-[20px]" />
+              <SheetTitle className="text-2xl font-semibold tracking-tight">{subscription.name}</SheetTitle>
+              <SheetDescription className="text-[14px]">
+                {subscription.active ? `Active · Renews automatically` : "Paused"}
+              </SheetDescription>
+            </>
+          ) : (
+            <>
+              <SheetTitle>
+                {subscription ? "Edit subscription" : "New subscription"}
+              </SheetTitle>
+              <SheetDescription>
+                Renewals are added to your expenses automatically.
+              </SheetDescription>
+            </>
+          )}
         </SheetHeader>
         <form
           className="flex flex-col gap-5"

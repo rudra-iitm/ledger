@@ -1,4 +1,5 @@
 import { CATEGORIES, type Category, type Expense } from "./types";
+import { resolveBrand } from "@/lib/brands/registry";
 import { startOfWeek } from "./dates";
 import { roundMoney } from "./money";
 import { inRange, rangeLength, type DateRange } from "./time-ranges";
@@ -35,11 +36,14 @@ export function filterExpenses(
       if (!filter.tags.every((tag) => expense.tags.includes(tag))) return false;
     }
     if (query) {
+      const brand = resolveBrand(`${expense.description} ${expense.notes || ""}`);
       const haystack = [
         expense.description,
         expense.category,
         expense.notes ?? "",
         expense.tags.join(" "),
+        brand ? brand.name : "",
+        brand ? brand.aliases.join(" ") : "",
       ]
         .join(" ")
         .toLowerCase();
