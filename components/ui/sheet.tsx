@@ -21,7 +21,7 @@ function SheetOverlay({
   return (
     <DrawerPrimitive.Overlay
       data-slot="sheet-overlay"
-      className={cn("fixed inset-0 z-50 bg-black/70", className)}
+      className={cn("fixed inset-0 z-50 bg-black/60 backdrop-blur-[2px]", className)}
       {...props}
     />
   );
@@ -70,7 +70,7 @@ const SheetContent = React.forwardRef<
         ref={localRef}
         data-slot="sheet-content"
         className={cn(
-          "fixed inset-x-0 z-50 mx-auto flex w-full max-w-lg flex-col rounded-t-3xl border border-border bg-popover outline-none",
+          "fixed inset-x-0 z-50 mx-auto flex w-full max-w-lg flex-col rounded-t-4xl border-t border-border bg-popover shadow-sheet outline-none",
           className,
         )}
         style={{ bottom: 0 }}
@@ -78,9 +78,9 @@ const SheetContent = React.forwardRef<
       >
         <div
           aria-hidden
-          className="mx-auto mt-3 h-1.5 w-10 shrink-0 rounded-full bg-muted"
+          className="mx-auto mt-3 h-1 w-9 shrink-0 rounded-full bg-muted-foreground/40"
         />
-        <div className="overflow-y-auto px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-4">
+        <div className="overflow-y-auto px-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-5">
           {children}
         </div>
       </DrawerPrimitive.Content>

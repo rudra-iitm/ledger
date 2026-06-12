@@ -66,7 +66,7 @@ export function ReportsView() {
 
       <section
         aria-label="Summary"
-        className="flex flex-col gap-1 rounded-2xl border border-border bg-card px-5 py-5"
+        className="flex flex-col gap-1 rounded-2xl border border-border bg-card shadow-soft px-5 py-5"
       >
         <span className="text-[13px] text-muted-foreground">{periodLabel}</span>
         <span className="text-3xl font-semibold tabular-nums">

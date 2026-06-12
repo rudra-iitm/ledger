@@ -223,7 +223,7 @@ export function CalendarView() {
                 <button
                   type="button"
                   onClick={() => setSelected(day.date)}
-                  className="flex w-full items-center justify-between rounded-2xl border border-border bg-card px-4 py-3.5 text-left outline-none transition-colors hover:bg-accent/50 focus-visible:ring-2 focus-visible:ring-ring"
+                  className="flex w-full items-center justify-between rounded-2xl border border-border bg-card shadow-soft px-4 py-3.5 text-left outline-none transition-colors hover:bg-accent/50 focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   <span className="text-[14px]">{formatFullDate(day.date)}</span>
                   <span className="text-[14px] font-semibold tabular-nums">

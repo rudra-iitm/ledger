@@ -7,7 +7,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { Input } from "@/components/ui/input";
+import { DateField } from "@/components/fields/date-field";
 import { Label } from "@/components/ui/label";
 import {
   TIME_PRESETS,
@@ -43,55 +43,61 @@ export function TimeRangePicker({
         {label}
         <ChevronDown aria-hidden className="size-3.5 text-muted-foreground" />
       </PopoverTrigger>
-      <PopoverContent align="start" className="w-64">
-        <div className="flex flex-col">
-          {TIME_PRESETS.filter((preset) => preset !== "custom").map((preset) => {
-            const selected = value.preset === preset;
-            return (
-              <button
-                key={preset}
-                type="button"
-                onClick={() => {
-                  onChange({ preset, custom: value.custom });
-                  setOpen(false);
-                }}
-                className="flex items-center justify-between rounded-lg px-3 py-2 text-left text-sm outline-none transition-colors hover:bg-accent focus-visible:bg-accent"
-              >
-                {TIME_PRESET_LABELS[preset]}
-                {selected && <Check aria-hidden className="size-4" />}
-              </button>
-            );
-          })}
-          <div
+      <PopoverContent
+        align="start"
+        className="w-64 divide-y divide-border/60 overflow-hidden p-0"
+      >
+        {TIME_PRESETS.filter((preset) => preset !== "custom").map((preset) => {
+          const selected = value.preset === preset;
+          return (
+            <button
+              key={preset}
+              type="button"
+              onClick={() => {
+                onChange({ preset, custom: value.custom });
+                setOpen(false);
+              }}
+              className={cn(
+                "flex h-12 w-full items-center justify-between px-4 text-left text-[15px] outline-none transition-colors hover:bg-accent/70 focus-visible:bg-accent/70 active:bg-accent/70",
+                selected && "font-medium",
+              )}
+            >
+              {TIME_PRESET_LABELS[preset]}
+              {selected && <Check aria-hidden className="size-4.5" />}
+            </button>
+          );
+        })}
+        <div className="flex flex-col gap-2.5 bg-background/40 p-4">
+          <Label
             className={cn(
-              "mt-1 flex flex-col gap-2 rounded-lg border border-border p-3",
-              value.preset === "custom" && "border-ring",
+              "text-[13px]",
+              value.preset === "custom" && "text-foreground",
             )}
           >
-            <Label className="text-[13px]">Custom range</Label>
-            <Input
-              type="date"
-              aria-label="Start date"
-              value={value.custom.start ?? ""}
-              onChange={(event) =>
-                onChange({
-                  preset: "custom",
-                  custom: { ...value.custom, start: event.target.value || null },
-                })
-              }
-            />
-            <Input
-              type="date"
-              aria-label="End date"
-              value={value.custom.end ?? ""}
-              onChange={(event) =>
-                onChange({
-                  preset: "custom",
-                  custom: { ...value.custom, end: event.target.value || null },
-                })
-              }
-            />
-          </div>
+            Custom range
+          </Label>
+          <DateField
+            ariaLabel="Start date"
+            placeholder="Start date"
+            value={value.custom.start}
+            onChange={(start) =>
+              onChange({
+                preset: "custom",
+                custom: { ...value.custom, start: start || null },
+              })
+            }
+          />
+          <DateField
+            ariaLabel="End date"
+            placeholder="End date"
+            value={value.custom.end}
+            onChange={(end) =>
+              onChange({
+                preset: "custom",
+                custom: { ...value.custom, end: end || null },
+              })
+            }
+          />
         </div>
       </PopoverContent>
     </Popover>

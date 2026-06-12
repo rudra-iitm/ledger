@@ -40,7 +40,7 @@ export function SettingsView() {
     <div className="flex flex-col gap-8">
       <section
         aria-label="Account"
-        className="flex items-center gap-4 rounded-2xl border border-border bg-card px-4 py-4"
+        className="flex items-center gap-4 rounded-2xl border border-border bg-card shadow-soft px-4 py-4"
       >
         <span
           aria-hidden
@@ -71,7 +71,7 @@ export function SettingsView() {
         <button
           type="button"
           onClick={() => sheets.openBudget()}
-          className="flex items-center justify-between rounded-2xl border border-border bg-card px-4 py-4 text-left outline-none transition-colors hover:bg-accent/50 focus-visible:ring-2 focus-visible:ring-ring"
+          className="flex items-center justify-between rounded-2xl border border-border bg-card shadow-soft px-4 py-4 text-left outline-none transition-colors hover:bg-accent/50 focus-visible:ring-2 focus-visible:ring-ring"
         >
           <span className="flex items-center gap-3">
             <Target aria-hidden className="size-5 text-muted-foreground" />
@@ -87,7 +87,7 @@ export function SettingsView() {
 
         <Link
           href="/accounts"
-          className="flex items-center justify-between rounded-2xl border border-border bg-card px-4 py-4 outline-none transition-colors hover:bg-accent/50 focus-visible:ring-2 focus-visible:ring-ring"
+          className="flex items-center justify-between rounded-2xl border border-border bg-card shadow-soft px-4 py-4 outline-none transition-colors hover:bg-accent/50 focus-visible:ring-2 focus-visible:ring-ring"
         >
           <span className="flex items-center gap-3">
             <Wallet aria-hidden className="size-5 text-muted-foreground" />
@@ -99,7 +99,7 @@ export function SettingsView() {
           </span>
         </Link>
 
-        <div className="flex items-center justify-between rounded-2xl border border-border bg-card px-4 py-3">
+        <div className="flex items-center justify-between rounded-2xl border border-border bg-card shadow-soft px-4 py-3">
           <Label
             htmlFor="currency"
             className="text-[15px] font-medium text-foreground"

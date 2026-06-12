@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { CalendarDays, Paperclip, Tag as TagIcon, X } from "lucide-react";
+import { Paperclip, Tag as TagIcon, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,10 +22,11 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { AccountSelect } from "@/components/fields/account-select";
 import { AttachmentManager } from "@/components/fields/attachment-manager";
+import { DateField } from "@/components/fields/date-field";
 import { SpaceSelect } from "@/components/fields/space-select";
 import { TagInput } from "@/components/fields/tag-input";
 import { CATEGORIES, categorySchema, type Expense } from "@/lib/domain/types";
-import { formatFullDate, todayISO } from "@/lib/domain/dates";
+import { todayISO } from "@/lib/domain/dates";
 import { inferCategory } from "@/lib/domain/quick-add";
 import { useAppStore } from "@/lib/store/app-store";
 
@@ -178,7 +179,7 @@ export function ExpenseSheet({
             void submit();
           }}
         >
-          <div className="flex items-end justify-center gap-1 rounded-2xl border border-border bg-card py-6 transition-all focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/40">
+          <div className="flex items-end justify-center gap-1 rounded-2xl border border-border bg-card py-6 shadow-soft transition-[border-color,box-shadow] duration-200 focus-within:border-ring/60 focus-within:ring-4 focus-within:ring-ring/15">
             <span className="pb-1 text-2xl font-medium text-muted-foreground">
               {currency}
             </span>
@@ -208,7 +209,7 @@ export function ExpenseSheet({
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-3.5">
             <div className="flex flex-col gap-2">
               <Label htmlFor="expense-category">Category</Label>
               <Select
@@ -232,27 +233,11 @@ export function ExpenseSheet({
             </div>
             <div className="flex flex-col gap-2">
               <Label htmlFor="expense-date">Date</Label>
-              <label
-                htmlFor="expense-date"
-                className="relative flex h-11 cursor-pointer items-center gap-2 rounded-xl border border-input bg-card px-4 transition-all focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/40"
-              >
-                <CalendarDays
-                  aria-hidden
-                  className="size-4 shrink-0 text-muted-foreground"
-                />
-                <span className="truncate text-[15px]">
-                  {formatFullDate(date)}
-                </span>
-                <input
-                  id="expense-date"
-                  type="date"
-                  value={date}
-                  onChange={(event) =>
-                    event.target.value && setDate(event.target.value)
-                  }
-                  className="absolute inset-0 cursor-pointer opacity-0"
-                />
-              </label>
+              <DateField
+                id="expense-date"
+                value={date}
+                onChange={(next) => next && setDate(next)}
+              />
             </div>
           </div>
 

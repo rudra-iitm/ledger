@@ -44,7 +44,7 @@ const GRAN_LABELS: Record<Granularity, string> = {
 
 function Stat({ label, value, tone }: { label: string; value: string; tone?: string }) {
   return (
-    <div className="flex flex-col gap-1 rounded-2xl border border-border bg-card px-4 py-3.5">
+    <div className="flex flex-col gap-1 rounded-2xl border border-border bg-card shadow-soft px-4 py-3.5">
       <span className="text-[12px] text-muted-foreground">{label}</span>
       <span className={cn("text-lg font-semibold tabular-nums", tone)}>{value}</span>
     </div>

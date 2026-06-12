@@ -81,13 +81,13 @@ export function ActionSheet({
           <SheetTitle>Quick add</SheetTitle>
         </SheetHeader>
         <QuickAddInput onAdded={onClose} />
-        <nav aria-label="Actions" className="mt-3 flex flex-col gap-0.5">
+        <nav aria-label="Actions" className="mt-2 flex flex-col gap-0.5">
           {ACTIONS.map(({ icon: Icon, label, description, action }) => (
             <button
               key={action}
               type="button"
               onClick={() => handle(action)}
-              className="flex items-center gap-3.5 rounded-2xl px-2.5 py-2.5 text-left outline-none transition-colors hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring"
+              className="flex items-center gap-3.5 rounded-2xl px-3 py-3 text-left outline-none transition-colors duration-200 hover:bg-accent active:bg-accent focus-visible:ring-2 focus-visible:ring-ring"
             >
               <span
                 aria-hidden

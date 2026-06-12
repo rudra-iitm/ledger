@@ -21,7 +21,7 @@ import { cn } from "@/lib/utils";
 
 function Stat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex flex-col gap-1 rounded-2xl border border-border bg-card px-4 py-3.5">
+    <div className="flex flex-col gap-1 rounded-2xl border border-border bg-card shadow-soft px-4 py-3.5">
       <span className="text-[12px] text-muted-foreground">{label}</span>
       <span className="text-xl font-semibold tabular-nums">{value}</span>
     </div>
@@ -109,7 +109,7 @@ export function SubscriptionsView() {
                   type="button"
                   onClick={() => sheets.openSubscription(subscription)}
                   className={cn(
-                    "flex w-full items-center gap-3 rounded-2xl border border-border bg-card px-4 py-3.5 text-left outline-none transition-colors hover:bg-accent/50 focus-visible:ring-2 focus-visible:ring-ring",
+                    "flex w-full items-center gap-3 rounded-2xl border border-border bg-card shadow-soft px-4 py-3.5 text-left outline-none transition-colors hover:bg-accent/50 focus-visible:ring-2 focus-visible:ring-ring",
                     !subscription.active && "opacity-60",
                   )}
                 >

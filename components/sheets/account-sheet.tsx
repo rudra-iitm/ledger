@@ -103,7 +103,7 @@ export function AccountSheet({
           <SheetTitle>{account ? "Edit account" : "New account"}</SheetTitle>
         </SheetHeader>
         <form
-          className="flex flex-col gap-4"
+          className="flex flex-col gap-5"
           onSubmit={(event) => {
             event.preventDefault();
             submit();
@@ -125,7 +125,7 @@ export function AccountSheet({
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-3.5">
             <div className="flex flex-col gap-2">
               <Label htmlFor="account-type">Type</Label>
               <Select

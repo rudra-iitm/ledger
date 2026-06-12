@@ -102,7 +102,7 @@ export function DashboardView() {
               type="button"
               onClick={() => sheets.openBudget()}
               className={cn(
-                "flex items-center gap-3 rounded-2xl border px-4 py-3 text-left outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
+                "flex items-center gap-3 rounded-2xl border px-4 py-3.5 text-left outline-none transition-[background-color,transform] duration-200 ease-spring active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-ring",
                 alert.overBudget
                   ? "border-destructive/40 bg-destructive/10"
                   : "border-amber-400/30 bg-amber-400/10",
@@ -143,7 +143,7 @@ export function DashboardView() {
           <Link
             key={href}
             href={href}
-            className="flex items-center gap-3 rounded-2xl border border-border bg-card px-4 py-3.5 outline-none transition-colors hover:bg-accent/50 focus-visible:ring-2 focus-visible:ring-ring"
+            className="flex items-center gap-3 rounded-2xl border border-border bg-card px-4 py-4 shadow-soft outline-none transition-[background-color,transform] duration-200 ease-spring hover:bg-accent/50 active:scale-[0.97] focus-visible:ring-2 focus-visible:ring-ring"
           >
             <Icon aria-hidden className="size-5 text-muted-foreground" />
             <span className="text-[14px] font-medium">{label}</span>

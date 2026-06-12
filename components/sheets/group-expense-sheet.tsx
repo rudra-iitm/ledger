@@ -130,7 +130,7 @@ export function GroupExpenseSheet({
           <SheetDescription>Choose how to split this expense.</SheetDescription>
         </SheetHeader>
         <form
-          className="flex flex-col gap-4"
+          className="flex flex-col gap-5"
           onSubmit={(event) => {
             event.preventDefault();
             submit();
@@ -147,7 +147,7 @@ export function GroupExpenseSheet({
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-3.5">
             <div className="flex flex-col gap-2">
               <Label htmlFor="group-expense-amount">Amount</Label>
               <Input

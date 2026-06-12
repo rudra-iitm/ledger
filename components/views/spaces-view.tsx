@@ -66,7 +66,7 @@ export function SpacesView() {
               <li key={space.id}>
                 <Link
                   href={`/space/?id=${space.id}`}
-                  className="flex flex-col gap-3 rounded-2xl border border-border bg-card px-4 py-4 outline-none transition-colors hover:bg-accent/50 focus-visible:ring-2 focus-visible:ring-ring"
+                  className="flex flex-col gap-3 rounded-2xl border border-border bg-card shadow-soft px-4 py-4 outline-none transition-colors hover:bg-accent/50 focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   <div className="flex items-center gap-3">
                     <span aria-hidden className="text-2xl">

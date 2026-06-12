@@ -122,7 +122,7 @@ export function GroupDetailView() {
           Settle up
         </h3>
         {settlements.length === 0 ? (
-          <p className="rounded-2xl border border-border bg-card px-4 py-4 text-sm text-muted-foreground">
+          <p className="rounded-2xl border border-border bg-card shadow-soft px-4 py-4 text-sm text-muted-foreground">
             All settled. Nobody owes anything.
           </p>
         ) : (
@@ -130,7 +130,7 @@ export function GroupDetailView() {
             {settlements.map((settlement, index) => (
               <li
                 key={index}
-                className="flex items-center gap-3 rounded-2xl border border-border bg-card px-4 py-3.5"
+                className="flex items-center gap-3 rounded-2xl border border-border bg-card shadow-soft px-4 py-3.5"
               >
                 <span className="min-w-0 flex-1 truncate text-base">
                   <span className="font-medium">{nameOf(settlement.from)}</span>
@@ -204,7 +204,7 @@ export function GroupDetailView() {
             {group.expenses.map((expense) => (
               <li
                 key={expense.id}
-                className="flex items-center gap-3 rounded-2xl border border-border bg-card px-4 py-3.5"
+                className="flex items-center gap-3 rounded-2xl border border-border bg-card shadow-soft px-4 py-3.5"
               >
                 <span className="flex min-w-0 flex-1 flex-col">
                   <span className="truncate text-base font-medium">

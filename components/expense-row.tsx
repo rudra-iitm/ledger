@@ -17,7 +17,7 @@ export function ExpenseRow({ expense }: { expense: Expense }) {
       <button
         type="button"
         onClick={() => sheets.openExpense(expense)}
-        className="flex w-full items-center gap-3 rounded-2xl px-2 py-2.5 text-left outline-none transition-colors hover:bg-accent/50 focus-visible:ring-2 focus-visible:ring-ring"
+        className="flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left outline-none transition-colors duration-200 hover:bg-accent/50 active:bg-accent/60 focus-visible:ring-2 focus-visible:ring-ring"
       >
         <CategoryIcon category={expense.category} />
         <span className="flex min-w-0 flex-1 flex-col">

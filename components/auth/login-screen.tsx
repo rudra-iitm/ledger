@@ -100,7 +100,7 @@ export function LoginScreen() {
       style={{ paddingTop: "calc(env(safe-area-inset-top) + 4rem)" }}
     >
       <div>
-        <div className="mb-8 flex size-14 items-center justify-center rounded-2xl border border-border bg-card">
+        <div className="mb-8 flex size-14 items-center justify-center rounded-2xl border border-border bg-card shadow-soft">
           <Wallet aria-hidden className="size-7" />
         </div>
         <h1 className="text-4xl font-semibold tracking-tight">Ledger</h1>

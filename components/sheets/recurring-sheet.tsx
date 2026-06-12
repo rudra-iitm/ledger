@@ -20,6 +20,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { AccountSelect } from "@/components/fields/account-select";
+import { DateField } from "@/components/fields/date-field";
 import {
   CATEGORIES,
   RECURRENCE_FREQUENCIES,
@@ -129,7 +130,7 @@ export function RecurringSheet({
           </SheetDescription>
         </SheetHeader>
         <form
-          className="flex flex-col gap-4"
+          className="flex flex-col gap-5"
           onSubmit={(event) => {
             event.preventDefault();
             submit();
@@ -146,7 +147,7 @@ export function RecurringSheet({
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-3.5">
             <div className="flex flex-col gap-2">
               <Label htmlFor="recurring-amount">Amount</Label>
               <Input
@@ -182,7 +183,7 @@ export function RecurringSheet({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-3.5">
             <div className="flex flex-col gap-2">
               <Label htmlFor="recurring-category">Category</Label>
               <Select
@@ -236,16 +237,13 @@ export function RecurringSheet({
             )}
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-3.5">
             <div className="flex flex-col gap-2">
               <Label htmlFor="recurring-start">Starts</Label>
-              <Input
+              <DateField
                 id="recurring-start"
-                type="date"
                 value={startDate}
-                onChange={(event) =>
-                  event.target.value && setStartDate(event.target.value)
-                }
+                onChange={(next) => next && setStartDate(next)}
               />
             </div>
             <div className="flex flex-col gap-2">

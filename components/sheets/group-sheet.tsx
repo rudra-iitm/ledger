@@ -53,7 +53,7 @@ export function GroupSheet({
           </SheetDescription>
         </SheetHeader>
         <form
-          className="flex flex-col gap-4"
+          className="flex flex-col gap-5"
           onSubmit={(event) => {
             event.preventDefault();
             submit();

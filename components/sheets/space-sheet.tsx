@@ -80,7 +80,7 @@ export function SpaceSheet({
           <SheetTitle>{space ? "Edit space" : "New space"}</SheetTitle>
         </SheetHeader>
         <form
-          className="flex flex-col gap-4"
+          className="flex flex-col gap-5"
           onSubmit={(event) => {
             event.preventDefault();
             submit();

@@ -17,11 +17,11 @@ export function InsightsStrip() {
   if (insights.length === 0) return null;
 
   return (
-    <ul className="-mx-5 flex gap-3 overflow-x-auto px-5 pb-1 [scrollbar-width:none]">
+    <ul className="-mx-5 flex snap-x gap-3 overflow-x-auto px-5 pb-1 [scrollbar-width:none]">
       {insights.map((insight) => (
         <li
           key={insight.id}
-          className="flex min-w-[10rem] shrink-0 flex-col gap-1 rounded-2xl border border-border bg-card px-4 py-3.5"
+          className="flex min-w-[10rem] shrink-0 snap-start scroll-mx-5 flex-col gap-1 rounded-2xl border border-border bg-card px-4 py-4 shadow-soft"
         >
           <span className="text-[12px] text-muted-foreground">
             {insight.label}

@@ -30,7 +30,7 @@ export function GroupsView() {
           <li key={group.id}>
             <Link
               href={`/group/?id=${group.id}`}
-              className="flex items-center gap-4 rounded-2xl border border-border bg-card px-4 py-4 outline-none transition-colors hover:bg-accent/50 focus-visible:ring-2 focus-visible:ring-ring"
+              className="flex items-center gap-4 rounded-2xl border border-border bg-card shadow-soft px-4 py-4 outline-none transition-colors hover:bg-accent/50 focus-visible:ring-2 focus-visible:ring-ring"
             >
               <span
                 aria-hidden

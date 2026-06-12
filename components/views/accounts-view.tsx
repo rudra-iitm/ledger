@@ -23,7 +23,7 @@ export function AccountsView() {
     <div className="flex flex-col gap-5">
       <section
         aria-label="Total balance"
-        className="rounded-2xl border border-border bg-card px-5 py-5"
+        className="rounded-2xl border border-border bg-card shadow-soft px-5 py-5"
       >
         <p className="text-[13px] text-muted-foreground">Total balance</p>
         <p className="mt-1 text-3xl font-semibold tabular-nums">
@@ -55,7 +55,7 @@ export function AccountsView() {
               <li key={account.id}>
                 <Link
                   href={`/account/?id=${account.id}`}
-                  className="flex items-center gap-3 rounded-2xl border border-border bg-card px-4 py-3.5 outline-none transition-colors hover:bg-accent/50 focus-visible:ring-2 focus-visible:ring-ring"
+                  className="flex items-center gap-3 rounded-2xl border border-border bg-card shadow-soft px-4 py-3.5 outline-none transition-colors hover:bg-accent/50 focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   <span aria-hidden className="text-xl">
                     {account.icon}

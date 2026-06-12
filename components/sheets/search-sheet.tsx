@@ -69,7 +69,7 @@ export function SearchSheet({
         <SheetHeader>
           <SheetTitle>Search</SheetTitle>
         </SheetHeader>
-        <div className="flex items-center gap-2 rounded-xl border border-input bg-card pl-4 pr-2 transition-all focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/40">
+        <div className="flex items-center gap-2 rounded-xl border border-input bg-card pl-4 pr-2 transition-[border-color,box-shadow,background-color] duration-200 focus-within:border-ring/60 focus-within:bg-accent/30 focus-within:ring-4 focus-within:ring-ring/15">
           <Search aria-hidden className="size-4 shrink-0 text-muted-foreground" />
           <input
             autoFocus
@@ -77,7 +77,7 @@ export function SearchSheet({
             placeholder="Expenses, categories, tags, groups"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            className="h-11 w-full bg-transparent text-[15px] outline-none placeholder:text-muted-foreground"
+            className="h-12 w-full bg-transparent text-base outline-none placeholder:text-muted-foreground"
           />
         </div>
 
@@ -154,7 +154,7 @@ export function SearchSheet({
                         close();
                         router.push(`/group/?id=${group.id}`);
                       }}
-                      className="flex w-full items-center gap-3 rounded-2xl border border-border bg-card px-3 py-3 text-left outline-none transition-colors hover:bg-accent/50 focus-visible:ring-2 focus-visible:ring-ring"
+                      className="flex w-full items-center gap-3 rounded-2xl border border-border bg-card shadow-soft px-3 py-3 text-left outline-none transition-colors hover:bg-accent/50 focus-visible:ring-2 focus-visible:ring-ring"
                     >
                       <Users aria-hidden className="size-5 text-muted-foreground" />
                       <span className="text-[15px] font-medium">{group.name}</span>

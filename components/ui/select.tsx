@@ -17,7 +17,7 @@ function SelectTrigger({
     <SelectPrimitive.Trigger
       data-slot="select-trigger"
       className={cn(
-        "flex h-11 w-full items-center justify-between gap-2 rounded-xl border border-input bg-card px-4 text-[15px] outline-none transition-all focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40 disabled:opacity-50 data-[placeholder]:text-muted-foreground [&>span]:truncate",
+        "flex h-12 w-full items-center justify-between gap-2 rounded-xl border border-input bg-card px-4 text-base outline-none transition-[border-color,box-shadow,background-color] duration-200 focus-visible:border-ring/60 focus-visible:ring-4 focus-visible:ring-ring/15 disabled:opacity-50 data-[placeholder]:text-muted-foreground [&>span]:truncate",
         className,
       )}
       {...props}
@@ -42,12 +42,12 @@ function SelectContent({
         data-slot="select-content"
         position={position}
         className={cn(
-          "relative z-[60] max-h-72 min-w-[var(--radix-select-trigger-width)] overflow-y-auto rounded-xl border border-border bg-popover p-1 text-popover-foreground shadow-lg data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95",
+          "relative z-[60] max-h-72 min-w-[var(--radix-select-trigger-width)] overflow-y-auto rounded-2xl border border-border bg-popover/90 p-1 text-popover-foreground shadow-float backdrop-blur-xl duration-200 ease-spring data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95",
           className,
         )}
         {...props}
       >
-        <SelectPrimitive.Viewport className="p-1">
+        <SelectPrimitive.Viewport className="p-0.5">
           {children}
         </SelectPrimitive.Viewport>
       </SelectPrimitive.Content>

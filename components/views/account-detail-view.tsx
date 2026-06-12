@@ -16,7 +16,7 @@ import { useAppStore } from "@/lib/store/app-store";
 
 function Stat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex flex-col gap-1 rounded-2xl border border-border bg-card px-4 py-3.5">
+    <div className="flex flex-col gap-1 rounded-2xl border border-border bg-card shadow-soft px-4 py-3.5">
       <span className="text-[12px] text-muted-foreground">{label}</span>
       <span className="text-lg font-semibold tabular-nums">{value}</span>
     </div>

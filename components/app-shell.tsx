@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -27,6 +28,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useAppStore } from "@/lib/store/app-store";
@@ -47,7 +49,7 @@ function Header({ title }: { title: string }) {
 
   return (
     <header
-      className="sticky top-0 z-40 border-b border-border/60 bg-background/90 backdrop-blur"
+      className="sticky top-0 z-40 border-b border-border/60 bg-background/80 backdrop-blur-xl"
       style={{ paddingTop: "env(safe-area-inset-top)" }}
     >
       <div className="mx-auto flex h-14 w-full max-w-lg items-center justify-between px-5">
@@ -135,13 +137,18 @@ function Header({ title }: { title: string }) {
                   Reports
                 </Link>
               </DropdownMenuItem>
+              <DropdownMenuSeparator />
               <DropdownMenuItem asChild>
                 <Link href="/settings">
                   <Settings aria-hidden />
                   Settings
                 </Link>
               </DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => signOut()}>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onSelect={() => signOut()}
+                className="text-destructive data-[highlighted]:text-destructive [&_svg]:text-destructive"
+              >
                 <LogOut aria-hidden />
                 Sign out
               </DropdownMenuItem>
@@ -153,9 +160,39 @@ function Header({ title }: { title: string }) {
   );
 }
 
+function useCondenseOnScroll() {
+  const [condensed, setCondensed] = useState(false);
+
+  useEffect(() => {
+    let lastY = window.scrollY;
+    let ticking = false;
+
+    const onScroll = () => {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(() => {
+        const y = window.scrollY;
+        const max = document.documentElement.scrollHeight - window.innerHeight;
+        const delta = y - lastY;
+        if (Math.abs(delta) > 6) {
+          setCondensed(delta > 0 && y > 64 && y < max - 16);
+          lastY = y;
+        }
+        ticking = false;
+      });
+    };
+
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  return condensed;
+}
+
 function TabBar() {
   const pathname = usePathname();
   const sheets = useSheets();
+  const condensed = useCondenseOnScroll();
   const [first, second, third, fourth] = TABS;
 
   const renderTab = ({ href, label, icon: Icon }: (typeof TABS)[number]) => {
@@ -165,14 +202,17 @@ function TabBar() {
       <Link
         key={href}
         href={href}
+        aria-label={label}
         aria-current={active ? "page" : undefined}
         className={cn(
-          "flex h-full flex-1 flex-col items-center justify-center gap-1 rounded-xl text-[11px] font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
+          "group flex h-full flex-1 items-center justify-center rounded-2xl outline-none transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-ring",
           active ? "text-foreground" : "text-muted-foreground",
         )}
       >
-        <Icon aria-hidden className="size-5.5" />
-        {label}
+        <Icon
+          aria-hidden
+          className="size-6 transition-transform duration-200 ease-spring group-active:scale-90"
+        />
       </Link>
     );
   };
@@ -180,10 +220,17 @@ function TabBar() {
   return (
     <nav
       aria-label="Primary"
-      className="fixed inset-x-0 bottom-0 z-40 border-t border-border/60 bg-background/90 backdrop-blur"
-      style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+      className="fixed inset-x-0 bottom-0 z-40 px-4"
+      style={{
+        paddingBottom: "max(0.75rem, calc(env(safe-area-inset-bottom) + 0.25rem))",
+      }}
     >
-      <div className="mx-auto flex h-16 w-full max-w-lg items-stretch px-3">
+      <div
+        className={cn(
+          "mx-auto flex h-14 w-full max-w-md origin-bottom items-stretch gap-1 rounded-3xl border border-border bg-popover/80 px-2 shadow-float backdrop-blur-xl transition-transform duration-300 ease-spring",
+          condensed && "scale-[0.82]",
+        )}
+      >
         {renderTab(first)}
         {renderTab(second)}
         <div className="flex flex-1 items-center justify-center">
@@ -191,9 +238,9 @@ function TabBar() {
             type="button"
             aria-label="Add"
             onClick={() => sheets.openActions()}
-            className="flex size-12 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg outline-none transition-transform focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-95"
+            className="flex size-10 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-soft outline-none transition-transform duration-200 ease-spring focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-90"
           >
-            <Plus aria-hidden className="size-6" />
+            <Plus aria-hidden className="size-5.5" />
           </button>
         </div>
         {renderTab(third)}

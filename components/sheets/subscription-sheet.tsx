@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
 import { AccountSelect } from "@/components/fields/account-select";
+import { DateField } from "@/components/fields/date-field";
 import {
   BILLING_CYCLES,
   CATEGORIES,
@@ -124,7 +125,7 @@ export function SubscriptionSheet({
           </SheetDescription>
         </SheetHeader>
         <form
-          className="flex flex-col gap-4"
+          className="flex flex-col gap-5"
           onSubmit={(event) => {
             event.preventDefault();
             submit();
@@ -141,7 +142,7 @@ export function SubscriptionSheet({
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-3.5">
             <div className="flex flex-col gap-2">
               <Label htmlFor="subscription-amount">Amount</Label>
               <Input
@@ -177,7 +178,7 @@ export function SubscriptionSheet({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-3.5">
             <div className="flex flex-col gap-2">
               <Label htmlFor="subscription-category">Category</Label>
               <Select
@@ -198,13 +199,10 @@ export function SubscriptionSheet({
             </div>
             <div className="flex flex-col gap-2">
               <Label htmlFor="subscription-renewal">Next renewal</Label>
-              <Input
+              <DateField
                 id="subscription-renewal"
-                type="date"
                 value={nextRenewalDate}
-                onChange={(event) =>
-                  event.target.value && setNextRenewalDate(event.target.value)
-                }
+                onChange={(next) => next && setNextRenewalDate(next)}
               />
             </div>
           </div>
