@@ -1,5 +1,7 @@
 "use client";
 
+import { useRouter } from "next/navigation";
+
 import {
   CalendarClock,
   LayoutGrid,
@@ -8,6 +10,7 @@ import {
   Target,
   Users,
   ArrowRightLeft,
+  Handshake,
 } from "lucide-react";
 import {
   Sheet,
@@ -71,6 +74,7 @@ export function ActionSheet({
   onClose: () => void;
 }) {
   const sheets = useSheets();
+  const router = useRouter();
 
   const handle = (action: (typeof ACTIONS)[number]["action"]) => {
     if (action === "expense") sheets.openExpense();

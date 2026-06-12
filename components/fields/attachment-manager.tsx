@@ -28,14 +28,18 @@ function formatSize(bytes: number): string {
 }
 
 export function AttachmentManager({
-  expenseId,
+  itemId,
   attachments,
+  type = "expense",
 }: {
-  expenseId: string;
+  itemId: string;
   attachments: Attachment[];
+  type?: "expense" | "lendBorrow";
 }) {
   const addAttachment = useAppStore((state) => state.addAttachment);
   const removeAttachment = useAppStore((state) => state.removeAttachment);
+  const addLendBorrowAttachment = useAppStore((state) => state.addLendBorrowAttachment);
+  const removeLendBorrowAttachment = useAppStore((state) => state.removeLendBorrowAttachment);
   const getAttachment = useAppStore((state) => state.getAttachment);
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
@@ -53,7 +57,11 @@ export function AttachmentManager({
           toast.error(`${file.name} is larger than 50 MB and was skipped`);
           continue;
         }
-        await addAttachment(expenseId, file);
+        if (type === "lendBorrow") {
+          await addLendBorrowAttachment(itemId, file);
+        } else {
+          await addAttachment(itemId, file);
+        }
       }
       toast.success("Attachment added");
     } catch {
@@ -121,8 +129,12 @@ export function AttachmentManager({
                 <button
                   type="button"
                   aria-label={`Delete ${attachment.name}`}
-                  onClick={() => {
-                    void removeAttachment(expenseId, attachment.id);
+                  onClick={async () => {
+                    if (type === "lendBorrow") {
+                      await removeLendBorrowAttachment(itemId, attachment.id);
+                    } else {
+                      await removeAttachment(itemId, attachment.id);
+                    }
                     toast.success("Attachment removed");
                   }}
                   className="rounded-lg p-1.5 text-muted-foreground outline-none transition-colors hover:text-destructive focus-visible:ring-2 focus-visible:ring-ring"

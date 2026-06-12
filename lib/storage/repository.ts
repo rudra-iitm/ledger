@@ -21,6 +21,8 @@ import {
   type Settings,
   type Space,
   type Subscription,
+  type LendBorrow,
+  lendBorrowsFileSchema,
 } from "../domain/types";
 
 export interface LedgerData {
@@ -32,6 +34,7 @@ export interface LedgerData {
   accounts: Account[];
   spaces: Space[];
   subscriptions: Subscription[];
+  lendBorrows: LendBorrow[];
 }
 
 export const EMPTY_DATA: LedgerData = {
@@ -43,6 +46,7 @@ export const EMPTY_DATA: LedgerData = {
   accounts: DEFAULT_ACCOUNTS,
   spaces: [],
   subscriptions: [],
+  lendBorrows: [],
 };
 
 const FILE_SCHEMAS = {
@@ -54,6 +58,7 @@ const FILE_SCHEMAS = {
   accounts: accountsFileSchema,
   spaces: spacesFileSchema,
   subscriptions: subscriptionsFileSchema,
+  lendBorrows: lendBorrowsFileSchema,
 } satisfies Record<DataFile, z.ZodType>;
 
 export class LedgerRepository {
@@ -81,6 +86,7 @@ export class LedgerRepository {
       accounts,
       spaces,
       subscriptions,
+      lendBorrows,
     ] = await Promise.all([
       this.readCollection("expenses", EMPTY_DATA.expenses),
       this.readCollection("recurring", EMPTY_DATA.recurring),
@@ -90,6 +96,7 @@ export class LedgerRepository {
       this.readCollection("accounts", EMPTY_DATA.accounts),
       this.readCollection("spaces", EMPTY_DATA.spaces),
       this.readCollection("subscriptions", EMPTY_DATA.subscriptions),
+      this.readCollection("lendBorrows", EMPTY_DATA.lendBorrows),
     ]);
     return {
       expenses,
@@ -100,6 +107,7 @@ export class LedgerRepository {
       accounts,
       spaces,
       subscriptions,
+      lendBorrows,
     };
   }
 

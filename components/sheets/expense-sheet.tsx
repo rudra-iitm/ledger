@@ -305,7 +305,7 @@ export function ExpenseSheet({
                 <Label>Attachments</Label>
                 {expense && liveExpense ? (
                   <AttachmentManager
-                    expenseId={expense.id}
+                    itemId={expense.id}
                     attachments={liveExpense.attachments}
                   />
                 ) : (

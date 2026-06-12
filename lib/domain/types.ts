@@ -219,6 +219,37 @@ export const accountsFileSchema = z.array(accountSchema);
 export const spacesFileSchema = z.array(spaceSchema);
 export const subscriptionsFileSchema = z.array(subscriptionSchema);
 
+export const lendBorrowTypeSchema = z.enum(["lent", "borrowed"]);
+export type LendBorrowType = z.infer<typeof lendBorrowTypeSchema>;
+
+export const lendBorrowRepaymentSchema = z.object({
+  id: z.string().min(1),
+  amount: z.number().positive(),
+  date: isoDate,
+  accountId: z.string().optional(),
+  createdAt: z.string().min(1),
+});
+export type LendBorrowRepayment = z.infer<typeof lendBorrowRepaymentSchema>;
+
+export const lendBorrowSchema = z.object({
+  id: z.string().min(1),
+  type: lendBorrowTypeSchema,
+  personName: z.string().min(1),
+  amount: z.number().positive(),
+  date: isoDate,
+  description: z.string().min(1),
+  accountId: z.string().optional(),
+  dueDate: isoDate.optional(),
+  phoneNumber: z.string().optional(),
+  notes: z.string().optional(),
+  repayments: z.array(lendBorrowRepaymentSchema).default([]),
+  attachments: z.array(attachmentSchema).default([]),
+  createdAt: z.string().min(1),
+});
+export type LendBorrow = z.infer<typeof lendBorrowSchema>;
+
+export const lendBorrowsFileSchema = z.array(lendBorrowSchema);
+
 export const DEFAULT_ACCOUNTS: Account[] = [
   {
     id: "acc-cash",

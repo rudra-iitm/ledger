@@ -21,6 +21,7 @@ import {
   CalendarCheck,
   Users,
   Wallet,
+  Handshake,
 } from "lucide-react";
 import { AuthGate } from "@/components/auth-gate";
 import { SheetProvider, useSheets } from "@/components/sheets/sheet-context";
@@ -117,6 +118,12 @@ function Header({ title }: { title: string }) {
                 <Link href="/reviews">
                   <CalendarCheck aria-hidden />
                   Monthly Review
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href="/lend-borrow">
+                  <Handshake aria-hidden />
+                  Lend & Borrow
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>

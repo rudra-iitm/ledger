@@ -34,6 +34,8 @@ import type {
   Space,
   Subscription,
   DebitCard,
+  LendBorrow,
+  LendBorrowRepayment,
 } from "../domain/types";
 import { createId } from "../domain/id";
 
@@ -101,6 +103,18 @@ interface AppState {
   ) => void;
   addDebitCard: (accountId: string, card: Omit<DebitCard, "id">) => void;
   deleteDebitCard: (accountId: string, cardId: string) => void;
+  addLendBorrow: (
+    item: Omit<LendBorrow, "id" | "createdAt" | "repayments" | "attachments"> & { attachments?: Attachment[] },
+  ) => string;
+  updateLendBorrow: (id: string, patch: Partial<Omit<LendBorrow, "id">>) => void;
+  deleteLendBorrow: (id: string) => void;
+  addLendBorrowRepayment: (
+    lendBorrowId: string,
+    repayment: Omit<LendBorrowRepayment, "id" | "createdAt">,
+  ) => void;
+  deleteLendBorrowRepayment: (lendBorrowId: string, repaymentId: string) => void;
+  addLendBorrowAttachment: (id: string, file: File) => Promise<void>;
+  removeLendBorrowAttachment: (id: string, attachmentId: string) => Promise<void>;
 }
 
 let repository: LedgerRepository | null = null;
@@ -567,6 +581,104 @@ export const useAppStore = create<AppState>((set, get) => {
             ? { ...acc, debitCards: acc.debitCards.filter((c) => c.id !== cardId) }
             : acc
         )
+      );
+    },
+
+    addLendBorrow: (item) => {
+      const id = createId();
+      mutate("lendBorrows", ({ lendBorrows }) => [
+        {
+          ...item,
+          id,
+          repayments: [],
+          attachments: [],
+          createdAt: new Date().toISOString(),
+        },
+        ...lendBorrows,
+      ]);
+      return id;
+    },
+
+    updateLendBorrow: (id, patch) =>
+      mutate("lendBorrows", ({ lendBorrows }) =>
+        lendBorrows.map((item) =>
+          item.id === id ? { ...item, ...patch } : item,
+        ),
+      ),
+
+    deleteLendBorrow: (id) =>
+      mutate("lendBorrows", ({ lendBorrows }) =>
+        lendBorrows.filter((item) => item.id !== id),
+      ),
+
+    addLendBorrowRepayment: (lendBorrowId, repayment) => {
+      mutate("lendBorrows", ({ lendBorrows }) =>
+        lendBorrows.map((item) =>
+          item.id === lendBorrowId
+            ? {
+                ...item,
+                repayments: [
+                  ...item.repayments,
+                  {
+                    ...repayment,
+                    id: createId(),
+                    createdAt: new Date().toISOString(),
+                  },
+                ],
+              }
+            : item,
+        ),
+      );
+    },
+
+    deleteLendBorrowRepayment: (lendBorrowId, repaymentId) => {
+      mutate("lendBorrows", ({ lendBorrows }) =>
+        lendBorrows.map((item) =>
+          item.id === lendBorrowId
+            ? {
+                ...item,
+                repayments: item.repayments.filter(
+                  (rep) => rep.id !== repaymentId,
+                ),
+              }
+            : item,
+        ),
+      );
+    },
+
+    addLendBorrowAttachment: async (id, file) => {
+      if (!attachmentStore) return;
+      const blob = await fileToAttachmentBlob(file);
+      const attachment: Attachment = {
+        id: createId(),
+        name: file.name,
+        mimeType: blob.mimeType,
+        size: file.size,
+        createdAt: new Date().toISOString(),
+      };
+      await attachmentStore.put(attachment.id, blob);
+      mutate("lendBorrows", ({ lendBorrows }) =>
+        lendBorrows.map((item) =>
+          item.id === id
+            ? { ...item, attachments: [...item.attachments, attachment] }
+            : item,
+        ),
+      );
+    },
+
+    removeLendBorrowAttachment: async (id, attachmentId) => {
+      if (attachmentStore) await attachmentStore.remove(attachmentId);
+      mutate("lendBorrows", ({ lendBorrows }) =>
+        lendBorrows.map((item) =>
+          item.id === id
+            ? {
+                ...item,
+                attachments: item.attachments.filter(
+                  (attachment) => attachment.id !== attachmentId,
+                ),
+              }
+            : item,
+        ),
       );
     },
   };

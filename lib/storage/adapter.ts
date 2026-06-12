@@ -7,6 +7,7 @@ export const DATA_FILES = [
   "accounts",
   "spaces",
   "subscriptions",
+  "lendBorrows",
 ] as const;
 
 export type DataFile = (typeof DATA_FILES)[number];
