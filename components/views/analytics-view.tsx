@@ -4,6 +4,8 @@ import { useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import { BarChart3, FileDown, FileText } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { resolveInstitution } from "@/lib/institutions/registry";
+import { InstitutionIcon } from "@/components/institution-icon";
 import { EmptyState } from "@/components/empty-state";
 import { InsightsStrip } from "@/components/insights-strip";
 import {
@@ -113,11 +115,17 @@ export function AnalyticsView() {
             <SelectItem value={ALL_ACCOUNTS}>All accounts</SelectItem>
             {accounts
               .filter((account) => !account.archived)
-              .map((account) => (
-                <SelectItem key={account.id} value={account.id}>
-                  {account.icon} {account.name}
-                </SelectItem>
-              ))}
+              .map((account) => {
+                const institution = resolveInstitution(account.name);
+                return (
+                  <SelectItem key={account.id} value={account.id}>
+                    <div className="flex items-center gap-2">
+                      <InstitutionIcon institution={institution} type={account.type} size="xs" />
+                      <span>{institution ? institution.name : account.name}</span>
+                    </div>
+                  </SelectItem>
+                );
+              })}
           </SelectContent>
         </Select>
       </div>
@@ -172,19 +180,23 @@ export function AnalyticsView() {
                 By account
               </h2>
               <ul className="flex flex-col gap-1">
-                {accountBreakdown.map(({ account, total: accountTotal }) => (
-                  <li
-                    key={account.id}
-                    className="flex items-center justify-between px-2 py-2 text-[15px]"
-                  >
-                    <span>
-                      {account.icon} {account.name}
-                    </span>
-                    <span className="font-semibold tabular-nums">
-                      {formatMoney(accountTotal, settings.currency)}
-                    </span>
-                  </li>
-                ))}
+                {accountBreakdown.map(({ account, total: accountTotal }) => {
+                  const institution = resolveInstitution(account.name);
+                  return (
+                    <li
+                      key={account.id}
+                      className="flex items-center justify-between px-2 py-2 text-[15px]"
+                    >
+                      <span className="flex items-center gap-2">
+                        <InstitutionIcon institution={institution} type={account.type} size="xs" />
+                        <span>{institution ? institution.name : account.name}</span>
+                      </span>
+                      <span className="font-semibold tabular-nums">
+                        {formatMoney(accountTotal, settings.currency)}
+                      </span>
+                    </li>
+                  );
+                })}
               </ul>
             </section>
           )}

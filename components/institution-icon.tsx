@@ -12,7 +12,7 @@ import type { AccountType } from "@/lib/domain/types";
 interface InstitutionIconProps {
   institution?: Institution | null;
   type?: AccountType;
-  size?: "sm" | "md" | "lg" | "xl";
+  size?: "xs" | "sm" | "md" | "lg" | "xl";
   className?: string;
 }
 
@@ -20,6 +20,7 @@ export function InstitutionIcon({ institution, type = "bank", size = "md", class
   const [imageError, setImageError] = useState<"none" | "clearbit" | "google">("none");
 
   const sizeClasses = {
+    xs: "size-5 rounded text-[10px]",
     sm: "size-8 rounded-lg text-sm",
     md: "size-10 rounded-xl text-xl",
     lg: "size-12 rounded-2xl text-2xl",

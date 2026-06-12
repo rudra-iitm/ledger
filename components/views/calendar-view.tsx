@@ -20,6 +20,8 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ExpenseRow } from "@/components/expense-row";
 import { EmptyState } from "@/components/empty-state";
 import { useSheets } from "@/components/sheets/sheet-context";
+import { resolveInstitution } from "@/lib/institutions/registry";
+import { InstitutionIcon } from "@/components/institution-icon";
 import { CATEGORIES, type Category } from "@/lib/domain/types";
 import { filterExpenses } from "@/lib/domain/analytics";
 import {
@@ -165,11 +167,17 @@ export function CalendarView() {
             <SelectItem value={ALL}>All accounts</SelectItem>
             {accounts
               .filter((account) => !account.archived)
-              .map((account) => (
-                <SelectItem key={account.id} value={account.id}>
-                  {account.icon} {account.name}
-                </SelectItem>
-              ))}
+              .map((account) => {
+                const institution = resolveInstitution(account.name);
+                return (
+                  <SelectItem key={account.id} value={account.id}>
+                    <div className="flex items-center gap-2">
+                      <InstitutionIcon institution={institution} type={account.type} size="xs" />
+                      <span>{institution ? institution.name : account.name}</span>
+                    </div>
+                  </SelectItem>
+                );
+              })}
           </SelectContent>
         </Select>
       </div>

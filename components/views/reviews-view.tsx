@@ -10,6 +10,8 @@ import {
   TrendingUp,
 } from "lucide-react";
 import { EmptyState } from "@/components/empty-state";
+import { resolveInstitution } from "@/lib/institutions/registry";
+import { InstitutionIcon } from "@/components/institution-icon";
 import { buildMonthlyReview } from "@/lib/domain/review";
 import { currentMonth, nextMonth, previousMonth } from "@/lib/domain/dates";
 import { formatMoney } from "@/lib/domain/money";
@@ -217,26 +219,34 @@ export function ReviewsView() {
               <h2 className="mb-2 text-sm font-medium text-muted-foreground">
                 Accounts
               </h2>
-              {review.accountInsights.mostUsed && (
-                <p className="mb-2 px-1 text-[13px] text-muted-foreground">
-                  Most used: {review.accountInsights.mostUsed.icon}{" "}
-                  {review.accountInsights.mostUsed.name}
-                </p>
-              )}
+              {review.accountInsights.mostUsed && (() => {
+                const institution = resolveInstitution(review.accountInsights.mostUsed.name);
+                return (
+                  <div className="mb-2 px-1 flex items-center gap-1.5 text-[13px] text-muted-foreground">
+                    Most used: 
+                    <InstitutionIcon institution={institution} type={review.accountInsights.mostUsed.type} size="xs" />
+                    {institution ? institution.name : review.accountInsights.mostUsed.name}
+                  </div>
+                );
+              })()}
               <ul className="flex flex-col gap-1">
-                {review.accountInsights.balances.map((account) => (
-                  <li
-                    key={account.id}
-                    className="flex items-center justify-between px-1 py-1.5 text-[15px]"
-                  >
-                    <span>
-                      {account.icon} {account.name}
-                    </span>
-                    <span className="font-semibold tabular-nums">
-                      {formatMoney(account.balance, currency)}
-                    </span>
-                  </li>
-                ))}
+                {review.accountInsights.balances.map((account) => {
+                  const institution = resolveInstitution(account.name);
+                  return (
+                    <li
+                      key={account.id}
+                      className="flex items-center justify-between px-1 py-1.5 text-[15px]"
+                    >
+                      <span className="flex items-center gap-2">
+                        <InstitutionIcon institution={institution} type={account.type} size="xs" />
+                        <span>{institution ? institution.name : account.name}</span>
+                      </span>
+                      <span className="font-semibold tabular-nums">
+                        {formatMoney(account.balance, currency)}
+                      </span>
+                    </li>
+                  );
+                })}
               </ul>
             </section>
           )}
