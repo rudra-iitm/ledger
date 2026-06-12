@@ -1,18 +1,17 @@
 "use client";
 
 import Link from "next/link";
-import { ChevronRight, Plus, Wallet } from "lucide-react";
+import { Plus, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/empty-state";
 import { useSheets } from "@/components/sheets/sheet-context";
-import { ACCOUNT_TYPE_LABELS } from "@/components/sheets/account-sheet";
-import { accountSummary } from "@/lib/domain/accounts";
+// Removed unused accountSummary import
 import { formatMoney } from "@/lib/domain/money";
 import { useAppStore } from "@/lib/store/app-store";
+import { AccountCard } from "@/components/account-card";
 
 export function AccountsView() {
   const accounts = useAppStore((state) => state.data.accounts);
-  const expenses = useAppStore((state) => state.data.expenses);
   const currency = useAppStore((state) => state.data.settings.currency);
   const sheets = useSheets();
 
@@ -48,34 +47,15 @@ export function AccountsView() {
           description="Add the accounts your money lives in to track where spending comes from."
         />
       ) : (
-        <ul className="flex flex-col gap-2">
+        <ul className="flex flex-col gap-4">
           {active.map((account) => {
-            const summary = accountSummary(expenses, account);
             return (
               <li key={account.id}>
                 <Link
                   href={`/account/?id=${account.id}`}
-                  className="flex items-center gap-3 rounded-2xl border border-border bg-card shadow-soft px-4 py-3.5 outline-none transition-colors hover:bg-accent/50 focus-visible:ring-2 focus-visible:ring-ring"
+                  className="block rounded-[20px] outline-none transition-transform active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                 >
-                  <span aria-hidden className="text-xl">
-                    {account.icon}
-                  </span>
-                  <span className="flex min-w-0 flex-1 flex-col">
-                    <span className="truncate text-[15px] font-medium">
-                      {account.name}
-                    </span>
-                    <span className="text-[13px] text-muted-foreground">
-                      {ACCOUNT_TYPE_LABELS[account.type]} ·{" "}
-                      {summary.totalTransactions} txns
-                    </span>
-                  </span>
-                  <span className="text-[15px] font-semibold tabular-nums">
-                    {formatMoney(account.balance, currency)}
-                  </span>
-                  <ChevronRight
-                    aria-hidden
-                    className="size-4 shrink-0 text-muted-foreground"
-                  />
+                  <AccountCard account={account} currency={currency} />
                 </Link>
               </li>
             );

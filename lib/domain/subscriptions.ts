@@ -113,6 +113,7 @@ export function materializeSubscriptions(
     while (renewal <= today && guard < 1000) {
       newExpenses.push({
         id: createId(),
+        type: "expense" as const,
         description: subscription.name,
         amount: subscription.amount,
         category: subscription.category,

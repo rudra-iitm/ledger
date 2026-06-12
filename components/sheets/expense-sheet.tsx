@@ -129,6 +129,7 @@ export function ExpenseSheet({
       amount: parsedAmount,
       category,
       date,
+      type: "expense" as const,
       accountId,
       spaceId,
       tags,

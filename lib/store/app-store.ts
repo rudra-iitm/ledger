@@ -33,6 +33,7 @@ import type {
   Settings,
   Space,
   Subscription,
+  DebitCard,
 } from "../domain/types";
 import { createId } from "../domain/id";
 
@@ -91,6 +92,15 @@ interface AppState {
   addTag: (tag: string) => void;
   deleteTag: (tag: string) => void;
   updateSettings: (patch: Partial<Settings>) => void;
+  addTransfer: (
+    sourceAccountId: string,
+    destinationAccountId: string,
+    amount: number,
+    date: string,
+    description: string,
+  ) => void;
+  addDebitCard: (accountId: string, card: Omit<DebitCard, "id">) => void;
+  deleteDebitCard: (accountId: string, cardId: string) => void;
 }
 
 let repository: LedgerRepository | null = null;
@@ -503,5 +513,61 @@ export const useAppStore = create<AppState>((set, get) => {
 
     updateSettings: (patch) =>
       mutate("settings", ({ settings }) => ({ ...settings, ...patch })),
+
+    addTransfer: (sourceAccountId, destinationAccountId, amount, date, description) => {
+      const id = createId();
+      
+      // 1. Create linked transfer transaction
+      mutate("expenses", ({ expenses }) => [
+        {
+          id,
+          type: "transfer" as const,
+          description,
+          amount,
+          category: "Other",
+          date,
+          accountId: sourceAccountId,
+          transferAccountId: destinationAccountId,
+          tags: [],
+          attachments: [],
+          createdAt: new Date().toISOString(),
+        },
+        ...expenses,
+      ]);
+
+      // 2. Decrease source balance and increase destination balance
+      mutate("accounts", ({ accounts }) =>
+        accounts.map((acc) => {
+          if (acc.id === sourceAccountId) {
+            return { ...acc, balance: acc.balance - amount };
+          }
+          if (acc.id === destinationAccountId) {
+            return { ...acc, balance: acc.balance + amount };
+          }
+          return acc;
+        })
+      );
+    },
+
+    addDebitCard: (accountId, card) => {
+      const id = createId();
+      mutate("accounts", ({ accounts }) =>
+        accounts.map((acc) =>
+          acc.id === accountId
+            ? { ...acc, debitCards: [...acc.debitCards, { ...card, id }] }
+            : acc
+        )
+      );
+    },
+
+    deleteDebitCard: (accountId, cardId) => {
+      mutate("accounts", ({ accounts }) =>
+        accounts.map((acc) =>
+          acc.id === accountId
+            ? { ...acc, debitCards: acc.debitCards.filter((c) => c.id !== cardId) }
+            : acc
+        )
+      );
+    },
   };
 });

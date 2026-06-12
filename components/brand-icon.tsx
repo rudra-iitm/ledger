@@ -1,5 +1,6 @@
 "use client";
 
+/* eslint-disable @next/next/no-img-element */
 import { BrandLogoSvg } from "@/lib/brands/icons";
 import type { Brand } from "@/lib/brands/registry";
 import { useState } from "react";

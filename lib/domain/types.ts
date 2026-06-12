@@ -63,6 +63,25 @@ export const attachmentSchema = z.object({
 });
 export type Attachment = z.infer<typeof attachmentSchema>;
 
+export const bankAccountTypeSchema = z.enum([
+  "Savings",
+  "Current",
+  "Salary",
+  "Joint",
+  "NRE",
+  "NRO",
+  "Business",
+]);
+export type BankAccountType = z.infer<typeof bankAccountTypeSchema>;
+
+export const debitCardSchema = z.object({
+  id: z.string().min(1),
+  network: z.enum(["Visa", "Mastercard", "RuPay"]),
+  expiryDate: z.string(),
+  last4Digits: z.string().length(4),
+});
+export type DebitCard = z.infer<typeof debitCardSchema>;
+
 export const accountSchema = z.object({
   id: z.string().min(1),
   name: z.string().min(1),
@@ -71,6 +90,15 @@ export const accountSchema = z.object({
   currency: z.string().min(1),
   icon: z.string().min(1),
   archived: z.boolean().default(false),
+  creditLimit: z.number().optional(),
+  statementBalance: z.number().optional(),
+  minimumBalance: z.number().optional(),
+  holderName: z.string().optional(),
+  accountNumber: z.string().optional(),
+  ifscCode: z.string().optional(),
+  branchName: z.string().optional(),
+  bankAccountType: bankAccountTypeSchema.optional(),
+  debitCards: z.array(debitCardSchema).default([]),
   createdAt: z.string().min(1),
 });
 export type Account = z.infer<typeof accountSchema>;
@@ -110,6 +138,9 @@ export const expenseSchema = z.object({
   recurringId: z.string().optional(),
   subscriptionId: z.string().optional(),
   accountId: z.string().optional(),
+  type: z.enum(["expense", "income", "transfer"]).default("expense"),
+  transferAccountId: z.string().optional(),
+  debitCardId: z.string().optional(),
   spaceId: z.string().optional(),
   tags: z.array(z.string().min(1)).default([]),
   notes: z.string().optional(),
@@ -197,6 +228,7 @@ export const DEFAULT_ACCOUNTS: Account[] = [
     currency: "₹",
     icon: "💵",
     archived: false,
+    debitCards: [],
     createdAt: "1970-01-01T00:00:00.000Z",
   },
   {
@@ -207,6 +239,7 @@ export const DEFAULT_ACCOUNTS: Account[] = [
     currency: "₹",
     icon: "🏦",
     archived: false,
+    debitCards: [],
     createdAt: "1970-01-01T00:00:00.000Z",
   },
 ];

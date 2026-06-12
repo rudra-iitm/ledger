@@ -27,6 +27,7 @@ export function QuickAddInput({
     addExpense({
       description: parsed.description,
       amount: parsed.amount,
+      type: "expense" as const,
       category: parsed.category,
       date: todayISO(),
     });

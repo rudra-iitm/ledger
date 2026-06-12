@@ -7,6 +7,7 @@ import type {
   RecurringExpense,
   Space,
   Subscription,
+  Group,
 } from "@/lib/domain/types";
 import { ActionSheet } from "./action-sheet";
 import { AccountSheet } from "./account-sheet";
@@ -18,12 +19,12 @@ import { RecurringSheet } from "./recurring-sheet";
 import { SearchSheet } from "./search-sheet";
 import { SpaceSheet } from "./space-sheet";
 import { SubscriptionSheet } from "./subscription-sheet";
+import { TransferSheet } from "./transfer-sheet";
 
 type ActiveSheet =
   | { kind: "actions" }
   | { kind: "expense"; expense?: Expense; defaults?: Partial<Expense> }
   | { kind: "recurring"; recurring?: RecurringExpense }
-  | { kind: "group" }
   | { kind: "group-expense"; groupId: string }
   | { kind: "budget" }
   | { kind: "search" }
@@ -36,13 +37,14 @@ interface SheetApi {
   openActions: () => void;
   openExpense: (expense?: Expense, defaults?: Partial<Expense>) => void;
   openRecurring: (recurring?: RecurringExpense) => void;
-  openGroup: () => void;
+  openGroup: (group?: Group) => void;
   openGroupExpense: (groupId: string) => void;
   openBudget: () => void;
   openSearch: () => void;
   openSpace: (space?: Space) => void;
   openAccount: (account?: Account) => void;
   openSubscription: (subscription?: Subscription) => void;
+  openTransfer: () => void;
   closeSheet: () => void;
 }
 
@@ -56,8 +58,16 @@ export function useSheets(): SheetApi {
 
 export function SheetProvider({ children }: { children: React.ReactNode }) {
   const [active, setActive] = useState<ActiveSheet>(null);
+  const [group, setGroup] = useState<{ open: boolean; data?: Group }>({
+    open: false,
+  });
+  const [transfer, setTransfer] = useState<{ open: boolean }>({ open: false });
 
-  const closeSheet = useCallback(() => setActive(null), []);
+  const closeSheet = useCallback(() => {
+    setActive(null);
+    setGroup((prev) => ({ ...prev, open: false }));
+    setTransfer((prev) => ({ ...prev, open: false }));
+  }, []);
 
   const api = useMemo<SheetApi>(
     () => ({
@@ -65,7 +75,7 @@ export function SheetProvider({ children }: { children: React.ReactNode }) {
       openExpense: (expense, defaults) =>
         setActive({ kind: "expense", expense, defaults }),
       openRecurring: (recurring) => setActive({ kind: "recurring", recurring }),
-      openGroup: () => setActive({ kind: "group" }),
+      openGroup: (data) => setGroup({ open: true, data }),
       openGroupExpense: (groupId) => setActive({ kind: "group-expense", groupId }),
       openBudget: () => setActive({ kind: "budget" }),
       openSearch: () => setActive({ kind: "search" }),
@@ -73,9 +83,10 @@ export function SheetProvider({ children }: { children: React.ReactNode }) {
       openAccount: (account) => setActive({ kind: "account", account }),
       openSubscription: (subscription) =>
         setActive({ kind: "subscription", subscription }),
-      closeSheet: () => setActive(null),
+      openTransfer: () => setTransfer({ open: true }),
+      closeSheet,
     }),
-    [],
+    [closeSheet],
   );
 
   return (
@@ -93,7 +104,10 @@ export function SheetProvider({ children }: { children: React.ReactNode }) {
         recurring={active?.kind === "recurring" ? active.recurring : undefined}
         onClose={closeSheet}
       />
-      <GroupSheet open={active?.kind === "group"} onClose={closeSheet} />
+      <GroupSheet
+        open={group.open}
+        onClose={() => setGroup((prev) => ({ ...prev, open: false }))}
+      />
       <GroupExpenseSheet
         open={active?.kind === "group-expense"}
         groupId={active?.kind === "group-expense" ? active.groupId : null}
@@ -117,6 +131,10 @@ export function SheetProvider({ children }: { children: React.ReactNode }) {
           active?.kind === "subscription" ? active.subscription : undefined
         }
         onClose={closeSheet}
+      />
+      <TransferSheet
+        open={transfer.open}
+        onClose={() => setTransfer((prev) => ({ ...prev, open: false }))}
       />
     </SheetContext.Provider>
   );

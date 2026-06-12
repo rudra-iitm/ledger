@@ -79,6 +79,7 @@ export function materializeRecurring(
         id: createId(),
         description: item.description,
         amount: item.amount,
+        type: "expense" as const,
         category: item.category,
         date,
         createdAt: now.toISOString(),

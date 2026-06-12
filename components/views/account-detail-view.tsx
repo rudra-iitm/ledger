@@ -8,11 +8,13 @@ import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/empty-state";
 import { ExpenseRow } from "@/components/expense-row";
 import { useSheets } from "@/components/sheets/sheet-context";
-import { ACCOUNT_TYPE_LABELS } from "@/components/sheets/account-sheet";
+import { AccountCard } from "@/components/account-card";
 import { accountExpenses, accountSummary } from "@/lib/domain/accounts";
 import { formatDisplayDate } from "@/lib/domain/dates";
 import { formatMoney } from "@/lib/domain/money";
 import { useAppStore } from "@/lib/store/app-store";
+import { AccountMetadataView } from "@/components/account-metadata";
+import { DebitCardsSection } from "@/components/debit-cards-section";
 
 function Stat({ label, value }: { label: string; value: string }) {
   return (
@@ -83,17 +85,15 @@ export function AccountDetailView() {
         </Button>
       </div>
 
-      <div className="flex items-center gap-3">
-        <span aria-hidden className="text-3xl">
-          {account.icon}
-        </span>
-        <div>
-          <h2 className="text-2xl font-semibold tracking-tight">{account.name}</h2>
-          <p className="text-[13px] text-muted-foreground">
-            {ACCOUNT_TYPE_LABELS[account.type]}
-          </p>
-        </div>
+      <div className="mb-4">
+        <AccountCard account={account} currency={currency} />
       </div>
+
+      <AccountMetadataView account={account} currency={currency} />
+      
+      {account.type === "bank" && (
+        <DebitCardsSection account={account} currency={currency} />
+      )}
 
       <div className="grid grid-cols-3 gap-3">
         <Stat label="Balance" value={formatMoney(account.balance, currency)} />

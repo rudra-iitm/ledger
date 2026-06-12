@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { CalendarClock, Pencil, Trash2 } from "lucide-react";
+import { CalendarClock, Pencil, Trash2, ArrowRightLeft } from "lucide-react";
 import { toast } from "sonner";
 import { BrandIcon } from "@/components/brand-icon";
 import { resolveBrand } from "@/lib/brands/registry";
@@ -172,10 +172,16 @@ export function ExpenseRow({ expense }: { expense: Expense }) {
           onClick={onRowClick}
           className="flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left outline-none transition-colors duration-200 hover:bg-[var(--brand-color,var(--accent))]/10 active:bg-[var(--brand-color,var(--accent))]/20 focus-visible:ring-2 focus-visible:ring-[var(--brand-color,var(--ring))]"
         >
-          <BrandIcon brand={brand} fallbackCategory={expense.category} />
+          {expense.type === "transfer" ? (
+            <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-muted/50 text-muted-foreground border border-border">
+              <ArrowRightLeft className="size-5" />
+            </div>
+          ) : (
+            <BrandIcon brand={brand} fallbackCategory={expense.category} />
+          )}
           <span className="flex min-w-0 flex-1 flex-col">
             <span className="flex items-center gap-1.5 truncate text-[15px] font-medium">
-              {brand ? brand.name : expense.description}
+              {expense.type === "transfer" ? expense.description : brand ? brand.name : expense.description}
               {expense.recurringId && (
                 <CalendarClock
                   aria-label="Recurring"
@@ -187,8 +193,8 @@ export function ExpenseRow({ expense }: { expense: Expense }) {
               {expense.category} · {formatDisplayDate(expense.date)}
             </span>
           </span>
-          <span className="text-[15px] font-semibold tabular-nums">
-            {formatMoney(expense.amount, currency)}
+          <span className={cn("text-[15px] font-semibold tabular-nums", expense.type === "transfer" && "text-muted-foreground")}>
+            {expense.type === "transfer" ? "" : ""}{formatMoney(expense.amount, currency)}
           </span>
         </button>
       </div>

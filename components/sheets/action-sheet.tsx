@@ -7,6 +7,7 @@ import {
   RefreshCw,
   Target,
   Users,
+  ArrowRightLeft,
 } from "lucide-react";
 import {
   Sheet,
@@ -23,6 +24,12 @@ const ACTIONS = [
     label: "Add expense",
     description: "Record a one-time expense",
     action: "expense",
+  },
+  {
+    icon: ArrowRightLeft,
+    label: "Transfer",
+    description: "Move money between accounts",
+    action: "transfer",
   },
   {
     icon: RefreshCw,
@@ -72,6 +79,7 @@ export function ActionSheet({
     if (action === "recurring") sheets.openRecurring();
     if (action === "group") sheets.openGroup();
     if (action === "budget") sheets.openBudget();
+    if (action === "transfer") sheets.openTransfer();
   };
 
   return (

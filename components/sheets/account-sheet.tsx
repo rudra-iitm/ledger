@@ -18,13 +18,13 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
-import { EmojiPicker } from "@/components/fields/emoji-picker";
 import {
-  ACCOUNT_ICONS,
   ACCOUNT_TYPES,
   accountTypeSchema,
+  bankAccountTypeSchema,
   type Account,
   type AccountType,
+  type BankAccountType,
 } from "@/lib/domain/types";
 import { useAppStore } from "@/lib/store/app-store";
 
@@ -55,7 +55,17 @@ export function AccountSheet({
   const [name, setName] = useState("");
   const [type, setType] = useState<AccountType>("bank");
   const [balance, setBalance] = useState("");
-  const [icon, setIcon] = useState(ACCOUNT_ICONS[1]);
+  
+  // Metadata state
+  const [holderName, setHolderName] = useState("");
+  const [accountNumber, setAccountNumber] = useState("");
+  const [ifscCode, setIfscCode] = useState("");
+  const [branchName, setBranchName] = useState("");
+  const [bankAccountType, setBankAccountType] = useState<BankAccountType | undefined>();
+  const [minimumBalance, setMinimumBalance] = useState("");
+  const [creditLimit, setCreditLimit] = useState("");
+  const [statementBalance, setStatementBalance] = useState("");
+
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -64,12 +74,26 @@ export function AccountSheet({
       setName(account.name);
       setType(account.type);
       setBalance(String(account.balance));
-      setIcon(account.icon);
+      setHolderName(account.holderName ?? "");
+      setAccountNumber(account.accountNumber ?? "");
+      setIfscCode(account.ifscCode ?? "");
+      setBranchName(account.branchName ?? "");
+      setBankAccountType(account.bankAccountType);
+      setMinimumBalance(account.minimumBalance !== undefined ? String(account.minimumBalance) : "");
+      setCreditLimit(account.creditLimit !== undefined ? String(account.creditLimit) : "");
+      setStatementBalance(account.statementBalance !== undefined ? String(account.statementBalance) : "");
     } else {
       setName("");
       setType("bank");
       setBalance("");
-      setIcon(ACCOUNT_ICONS[1]);
+      setHolderName("");
+      setAccountNumber("");
+      setIfscCode("");
+      setBranchName("");
+      setBankAccountType(undefined);
+      setMinimumBalance("");
+      setCreditLimit("");
+      setStatementBalance("");
     }
     setError(null);
   }, [open, account]);
@@ -83,8 +107,17 @@ export function AccountSheet({
       name: name.trim(),
       type,
       balance: Number(balance) || 0,
-      icon,
+      icon: account ? account.icon : "🏦", // Keep legacy field populated for database compat
       currency,
+      debitCards: account ? account.debitCards : [],
+      holderName: type === "bank" && holderName.trim() ? holderName.trim() : undefined,
+      accountNumber: type === "bank" && accountNumber.trim() ? accountNumber.trim() : undefined,
+      ifscCode: type === "bank" && ifscCode.trim() ? ifscCode.trim() : undefined,
+      branchName: type === "bank" && branchName.trim() ? branchName.trim() : undefined,
+      bankAccountType: type === "bank" ? bankAccountType : undefined,
+      minimumBalance: type === "bank" && minimumBalance ? Number(minimumBalance) : undefined,
+      creditLimit: type === "credit_card" && creditLimit ? Number(creditLimit) : undefined,
+      statementBalance: type === "credit_card" && statementBalance ? Number(statementBalance) : undefined,
     };
     if (account) {
       updateAccount(account.id, payload);
@@ -109,11 +142,6 @@ export function AccountSheet({
             submit();
           }}
         >
-          <div className="flex flex-col gap-2">
-            <Label>Icon</Label>
-            <EmojiPicker value={icon} onChange={setIcon} options={ACCOUNT_ICONS} />
-          </div>
-
           <div className="flex flex-col gap-2">
             <Label htmlFor="account-name">Name</Label>
             <Input
@@ -161,6 +189,61 @@ export function AccountSheet({
               </div>
             </div>
           </div>
+
+          {type === "bank" && (
+            <div className="flex flex-col gap-3.5 rounded-xl border border-border p-4 bg-muted/30">
+              <span className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Account Details</span>
+              <div className="grid grid-cols-2 gap-3.5">
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="holder-name">Account Holder</Label>
+                  <Input id="holder-name" placeholder="John Doe" value={holderName} onChange={(e) => setHolderName(e.target.value)} />
+                </div>
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="account-number">Account Number</Label>
+                  <Input id="account-number" placeholder="000012345678" value={accountNumber} onChange={(e) => setAccountNumber(e.target.value)} />
+                </div>
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="ifsc-code">IFSC Code</Label>
+                  <Input id="ifsc-code" placeholder="HDFC0001234" value={ifscCode} onChange={(e) => setIfscCode(e.target.value)} />
+                </div>
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="branch-name">Branch</Label>
+                  <Input id="branch-name" placeholder="Main Branch" value={branchName} onChange={(e) => setBranchName(e.target.value)} />
+                </div>
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="bank-account-type">Account Variant</Label>
+                  <Select value={bankAccountType} onValueChange={(value) => setBankAccountType(bankAccountTypeSchema.parse(value))}>
+                    <SelectTrigger id="bank-account-type"><SelectValue placeholder="Select type" /></SelectTrigger>
+                    <SelectContent>
+                      {bankAccountTypeSchema.options.map((item) => (
+                        <SelectItem key={item} value={item}>{item}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="min-balance">Minimum Balance</Label>
+                  <Input id="min-balance" type="number" inputMode="decimal" step="0.01" placeholder="10000" value={minimumBalance} onChange={(e) => setMinimumBalance(e.target.value)} />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {type === "credit_card" && (
+            <div className="flex flex-col gap-3.5 rounded-xl border border-border p-4 bg-muted/30">
+              <span className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Credit Limits</span>
+              <div className="grid grid-cols-2 gap-3.5">
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="credit-limit">Total Credit Limit</Label>
+                  <Input id="credit-limit" type="number" inputMode="decimal" step="0.01" placeholder="200000" value={creditLimit} onChange={(e) => setCreditLimit(e.target.value)} />
+                </div>
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="statement-balance">Statement Balance</Label>
+                  <Input id="statement-balance" type="number" inputMode="decimal" step="0.01" placeholder="0" value={statementBalance} onChange={(e) => setStatementBalance(e.target.value)} />
+                </div>
+              </div>
+            </div>
+          )}
 
           {error && (
             <p role="alert" className="text-sm text-destructive">
