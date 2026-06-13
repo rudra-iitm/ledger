@@ -23,7 +23,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { CATEGORIES, type Category } from "@/lib/domain/types";
-import { filterExpenses } from "@/lib/domain/analytics";
+import { filterExpenses, totalSpending } from "@/lib/domain/analytics";
 import { resolveRange } from "@/lib/domain/time-ranges";
 import { formatDisplayDate } from "@/lib/domain/dates";
 import { formatMoney } from "@/lib/domain/money";
@@ -298,10 +298,7 @@ export function ExpensesView() {
         <>
           <p className="px-1 text-[13px] text-muted-foreground">
             {filtered.length} {filtered.length === 1 ? "expense" : "expenses"} ·{" "}
-            {formatMoney(
-              filtered.reduce((sum, expense) => sum + expense.amount, 0),
-              settings.currency,
-            )}
+            {formatMoney(totalSpending(filtered), settings.currency)}
           </p>
 
           {grouped ? (

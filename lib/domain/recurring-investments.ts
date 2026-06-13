@@ -1,4 +1,4 @@
-import type { Expense, RecurringExpense } from "./types";
+import type { Expense, RecurringInvestment } from "./types";
 import {
   addDays,
   addMonthsClamped,
@@ -9,22 +9,26 @@ import {
 } from "./dates";
 import { createId } from "./id";
 
-export interface MaterializationResult {
+export interface InvestmentMaterializationResult {
   newExpenses: Expense[];
-  updatedRecurring: RecurringExpense[];
+  updatedRecurring: RecurringInvestment[];
   changed: boolean;
 }
 
-function firstOccurrence(item: RecurringExpense): string {
+function firstOccurrence(item: RecurringInvestment): string {
   switch (item.frequency) {
-    case "monthly": {
-      const candidate = clampedDateInMonth(monthOf(item.startDate), item.dayOfMonth);
+    case "monthly":
+    case "quarterly": {
+      const candidate = clampedDateInMonth(
+        monthOf(item.startDate),
+        item.dayOfMonth,
+      );
+      const step = item.frequency === "quarterly" ? 3 : 1;
       return candidate >= item.startDate
         ? candidate
-        : addMonthsClamped(candidate, 1, item.dayOfMonth);
+        : addMonthsClamped(candidate, step, item.dayOfMonth);
     }
     case "yearly":
-      return item.startDate;
     case "weekly":
     case "daily":
     default:
@@ -32,7 +36,7 @@ function firstOccurrence(item: RecurringExpense): string {
   }
 }
 
-function advance(item: RecurringExpense, date: string): string {
+function advance(item: RecurringInvestment, date: string): string {
   switch (item.frequency) {
     case "daily":
       return addDays(date, 1);
@@ -40,6 +44,8 @@ function advance(item: RecurringExpense, date: string): string {
       return addDays(date, 7);
     case "monthly":
       return addMonthsClamped(date, 1, item.dayOfMonth);
+    case "quarterly":
+      return addMonthsClamped(date, 3, item.dayOfMonth);
     case "yearly":
       return addYears(date, 1);
     default:
@@ -47,7 +53,7 @@ function advance(item: RecurringExpense, date: string): string {
   }
 }
 
-function occurrences(item: RecurringExpense, today: string): string[] {
+function occurrences(item: RecurringInvestment, today: string): string[] {
   const result: string[] = [];
   let date = item.lastMaterializedDate
     ? advance(item, item.lastMaterializedDate)
@@ -61,10 +67,10 @@ function occurrences(item: RecurringExpense, today: string): string[] {
   return result;
 }
 
-export function materializeRecurring(
-  recurring: RecurringExpense[],
+export function materializeInvestments(
+  recurring: RecurringInvestment[],
   now: Date = new Date(),
-): MaterializationResult {
+): InvestmentMaterializationResult {
   const today = todayISO(now);
   const newExpenses: Expense[] = [];
   let changed = false;
@@ -77,16 +83,17 @@ export function materializeRecurring(
     for (const date of dueDates) {
       newExpenses.push({
         id: createId(),
-        description: item.description,
+        description: item.name,
         amount: item.amount,
-        type: "expense" as const,
-        category: item.category,
+        type: "investment" as const,
+        category: "Investments",
         date,
         createdAt: now.toISOString(),
-        recurringId: item.id,
-        accountId: item.accountId,
-        spaceId: item.spaceId,
+        accountId: item.fromAccountId,
+        transferAccountId: item.investmentAccountId,
+        units: item.units,
         affectsBalance: true,
+        notes: item.notes,
         tags: [],
         attachments: [],
       });
@@ -98,8 +105,8 @@ export function materializeRecurring(
   return { newExpenses, updatedRecurring, changed };
 }
 
-export function nextDueDate(
-  item: RecurringExpense,
+export function nextInvestmentDate(
+  item: RecurringInvestment,
   now: Date = new Date(),
 ): string {
   const today = todayISO(now);

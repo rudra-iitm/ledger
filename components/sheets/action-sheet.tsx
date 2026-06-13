@@ -1,7 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-
 import {
   CalendarClock,
   LayoutGrid,
@@ -10,7 +8,8 @@ import {
   Target,
   Users,
   ArrowRightLeft,
-  Handshake,
+  TrendingUp,
+  LineChart,
 } from "lucide-react";
 import {
   Sheet,
@@ -29,10 +28,22 @@ const ACTIONS = [
     action: "expense",
   },
   {
+    icon: TrendingUp,
+    label: "Add income",
+    description: "Salary, freelance, refunds, and more",
+    action: "income",
+  },
+  {
     icon: ArrowRightLeft,
     label: "Transfer",
     description: "Move money between accounts",
     action: "transfer",
+  },
+  {
+    icon: LineChart,
+    label: "Add investment",
+    description: "Gold, silver, SIPs & more",
+    action: "investment",
   },
   {
     icon: RefreshCw,
@@ -74,10 +85,11 @@ export function ActionSheet({
   onClose: () => void;
 }) {
   const sheets = useSheets();
-  const router = useRouter();
 
   const handle = (action: (typeof ACTIONS)[number]["action"]) => {
     if (action === "expense") sheets.openExpense();
+    if (action === "income") sheets.openIncome();
+    if (action === "investment") sheets.openInvestment();
     if (action === "subscription") sheets.openSubscription();
     if (action === "space") sheets.openSpace();
     if (action === "recurring") sheets.openRecurring();

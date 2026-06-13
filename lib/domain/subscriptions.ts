@@ -121,6 +121,7 @@ export function materializeSubscriptions(
         createdAt: now.toISOString(),
         subscriptionId: subscription.id,
         accountId: subscription.accountId,
+        affectsBalance: true,
         tags: [],
         attachments: [],
       });

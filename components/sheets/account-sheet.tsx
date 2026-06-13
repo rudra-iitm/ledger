@@ -26,6 +26,8 @@ import {
   type AccountType,
   type BankAccountType,
 } from "@/lib/domain/types";
+import { DateField } from "@/components/fields/date-field";
+import { todayISO } from "@/lib/domain/dates";
 import { useAppStore } from "@/lib/store/app-store";
 
 export const ACCOUNT_TYPE_LABELS: Record<AccountType, string> = {
@@ -55,7 +57,10 @@ export function AccountSheet({
   const [name, setName] = useState("");
   const [type, setType] = useState<AccountType>("bank");
   const [balance, setBalance] = useState("");
-  
+  const [openingDate, setOpeningDate] = useState(todayISO());
+  const [statementDueDate, setStatementDueDate] = useState("");
+  const [minimumDue, setMinimumDue] = useState("");
+
   // Metadata state
   const [holderName, setHolderName] = useState("");
   const [accountNumber, setAccountNumber] = useState("");
@@ -73,7 +78,10 @@ export function AccountSheet({
     if (account) {
       setName(account.name);
       setType(account.type);
-      setBalance(String(account.balance));
+      setBalance(String(account.openingBalance));
+      setOpeningDate(account.openingDate ?? todayISO());
+      setStatementDueDate(account.statementDueDate ?? "");
+      setMinimumDue(account.minimumDue !== undefined ? String(account.minimumDue) : "");
       setHolderName(account.holderName ?? "");
       setAccountNumber(account.accountNumber ?? "");
       setIfscCode(account.ifscCode ?? "");
@@ -86,6 +94,9 @@ export function AccountSheet({
       setName("");
       setType("bank");
       setBalance("");
+      setOpeningDate(todayISO());
+      setStatementDueDate("");
+      setMinimumDue("");
       setHolderName("");
       setAccountNumber("");
       setIfscCode("");
@@ -103,10 +114,13 @@ export function AccountSheet({
       setError("Add a name");
       return;
     }
+    const openingBalance = Number(balance) || 0;
     const payload = {
       name: name.trim(),
       type,
-      balance: Number(balance) || 0,
+      balance: openingBalance,
+      openingBalance,
+      openingDate,
       icon: account ? account.icon : "🏦", // Keep legacy field populated for database compat
       currency,
       debitCards: account ? account.debitCards : [],
@@ -118,6 +132,8 @@ export function AccountSheet({
       minimumBalance: type === "bank" && minimumBalance ? Number(minimumBalance) : undefined,
       creditLimit: type === "credit_card" && creditLimit ? Number(creditLimit) : undefined,
       statementBalance: type === "credit_card" && statementBalance ? Number(statementBalance) : undefined,
+      minimumDue: type === "credit_card" && minimumDue ? Number(minimumDue) : undefined,
+      statementDueDate: type === "credit_card" && statementDueDate ? statementDueDate : undefined,
     };
     if (account) {
       updateAccount(account.id, payload);
@@ -173,7 +189,9 @@ export function AccountSheet({
               </Select>
             </div>
             <div className="flex flex-col gap-2">
-              <Label htmlFor="account-balance">Balance</Label>
+              <Label htmlFor="account-balance">
+                {type === "credit_card" ? "Opening outstanding" : "Opening balance"}
+              </Label>
               <div className="flex items-center gap-2 rounded-xl border border-input bg-card px-3.5">
                 <span className="text-muted-foreground">{currency}</span>
                 <input
@@ -188,6 +206,15 @@ export function AccountSheet({
                 />
               </div>
             </div>
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="account-opening-date">As of</Label>
+            <DateField
+              id="account-opening-date"
+              value={openingDate}
+              onChange={(next) => next && setOpeningDate(next)}
+            />
           </div>
 
           {type === "bank" && (
@@ -240,6 +267,14 @@ export function AccountSheet({
                 <div className="flex flex-col gap-2">
                   <Label htmlFor="statement-balance">Statement Balance</Label>
                   <Input id="statement-balance" type="number" inputMode="decimal" step="0.01" placeholder="0" value={statementBalance} onChange={(e) => setStatementBalance(e.target.value)} />
+                </div>
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="minimum-due">Minimum Due</Label>
+                  <Input id="minimum-due" type="number" inputMode="decimal" step="0.01" placeholder="0" value={minimumDue} onChange={(e) => setMinimumDue(e.target.value)} />
+                </div>
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="statement-due-date">Due Date</Label>
+                  <DateField id="statement-due-date" value={statementDueDate || null} onChange={(next) => setStatementDueDate(next)} />
                 </div>
               </div>
             </div>

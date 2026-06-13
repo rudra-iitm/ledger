@@ -1,6 +1,7 @@
 import type { Budgets, Category, Expense } from "./types";
 import { currentMonth, monthOf } from "./dates";
 import { roundMoney } from "./money";
+import { isSpend } from "./transactions";
 
 export interface BudgetSummary {
   spent: number;
@@ -22,10 +23,9 @@ export function monthSpending(
   month: string = currentMonth(),
 ): number {
   return roundMoney(
-    monthExpenses(expenses, month).reduce(
-      (total, expense) => total + expense.amount,
-      0,
-    ),
+    monthExpenses(expenses, month)
+      .filter(isSpend)
+      .reduce((total, expense) => total + expense.amount, 0),
   );
 }
 
@@ -60,7 +60,7 @@ export function categoryBudgetSummaries(
   budgets: Budgets,
   month: string = currentMonth(),
 ): CategoryBudgetSummary[] {
-  const monthly = monthExpenses(expenses, month);
+  const monthly = monthExpenses(expenses, month).filter(isSpend);
   const spentByCategory = new Map<Category, number>();
   for (const expense of monthly) {
     spentByCategory.set(

@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
 import { AccountSelect } from "@/components/fields/account-select";
+import { AffectBalanceToggle } from "@/components/fields/affect-balance-toggle";
 import { AttachmentManager } from "@/components/fields/attachment-manager";
 import { DateField } from "@/components/fields/date-field";
 import { SpaceSelect } from "@/components/fields/space-select";
@@ -62,6 +63,7 @@ export function ExpenseSheet({
   const [spaceId, setSpaceId] = useState<string | undefined>();
   const [tags, setTags] = useState<string[]>([]);
   const [notes, setNotes] = useState("");
+  const [affectsBalance, setAffectsBalance] = useState(true);
   const [showExtras, setShowExtras] = useState(false);
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -81,6 +83,7 @@ export function ExpenseSheet({
       setSpaceId(expense.spaceId);
       setTags(expense.tags);
       setNotes(expense.notes ?? "");
+      setAffectsBalance(expense.affectsBalance ?? true);
       setShowExtras(
         expense.tags.length > 0 ||
           !!expense.notes ||
@@ -98,6 +101,7 @@ export function ExpenseSheet({
       setSpaceId(defaults?.spaceId);
       setTags([]);
       setNotes("");
+      setAffectsBalance(true);
       setShowExtras(!!defaults?.spaceId || !!defaults?.accountId);
       setPendingFiles([]);
     }
@@ -133,6 +137,7 @@ export function ExpenseSheet({
       accountId,
       spaceId,
       tags,
+      affectsBalance,
       notes: notes.trim() || undefined,
     };
 
@@ -277,6 +282,10 @@ export function ExpenseSheet({
 
           {showExtras ? (
             <div className="flex flex-col gap-5">
+              <AffectBalanceToggle
+                checked={affectsBalance}
+                onChange={setAffectsBalance}
+              />
               <div className="flex flex-col gap-2">
                 <Label htmlFor="expense-space">Space</Label>
                 <SpaceSelect

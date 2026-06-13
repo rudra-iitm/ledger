@@ -20,6 +20,8 @@ import {
 import { GitHubAttachmentStore } from "../storage/github-attachments";
 import { materializeRecurring } from "../domain/recurring";
 import { materializeSubscriptions } from "../domain/subscriptions";
+import { materializeInvestments } from "../domain/recurring-investments";
+import { recomputeBalances } from "../domain/balances";
 import type {
   Account,
   Attachment,
@@ -36,6 +38,8 @@ import type {
   DebitCard,
   LendBorrow,
   LendBorrowRepayment,
+  RecurringInvestment,
+  Goal,
 } from "../domain/types";
 import { createId } from "../domain/id";
 
@@ -51,8 +55,18 @@ interface AppState {
   signIn: (session: AuthSession) => Promise<void>;
   signOut: () => void;
   addExpense: (
-    expense: Omit<Expense, "id" | "createdAt" | "tags" | "attachments"> &
-      Partial<Pick<Expense, "tags" | "attachments">>,
+    expense: Omit<
+      Expense,
+      "id" | "createdAt" | "tags" | "attachments" | "affectsBalance"
+    > &
+      Partial<Pick<Expense, "tags" | "attachments" | "affectsBalance">>,
+  ) => string;
+  addIncome: (
+    income: Omit<
+      Expense,
+      "id" | "createdAt" | "tags" | "attachments" | "affectsBalance" | "type"
+    > &
+      Partial<Pick<Expense, "tags" | "attachments" | "affectsBalance">>,
   ) => string;
   updateExpense: (id: string, patch: Partial<Omit<Expense, "id">>) => void;
   deleteExpense: (id: string) => void;
@@ -103,7 +117,15 @@ interface AppState {
     amount: number,
     date: string,
     description: string,
+    affectsBalance?: boolean,
   ) => void;
+  addCreditCardPayment: (payment: {
+    cardId: string;
+    fromAccountId: string;
+    amount: number;
+    date: string;
+    notes?: string;
+  }) => void;
   addDebitCard: (accountId: string, card: Omit<DebitCard, "id">) => void;
   deleteDebitCard: (accountId: string, cardId: string) => void;
   addLendBorrow: (
@@ -118,6 +140,27 @@ interface AppState {
   deleteLendBorrowRepayment: (lendBorrowId: string, repaymentId: string) => void;
   addLendBorrowAttachment: (id: string, file: File) => Promise<void>;
   removeLendBorrowAttachment: (id: string, attachmentId: string) => Promise<void>;
+  addInvestment: (payload: {
+    name: string;
+    fromAccountId: string;
+    investmentAccountId: string;
+    amount: number;
+    units?: number;
+    date: string;
+    notes?: string;
+    affectsBalance?: boolean;
+  }) => void;
+  addRecurringInvestment: (
+    item: Omit<RecurringInvestment, "id" | "createdAt" | "lastMaterializedDate">,
+  ) => void;
+  updateRecurringInvestment: (
+    id: string,
+    patch: Partial<Omit<RecurringInvestment, "id">>,
+  ) => void;
+  deleteRecurringInvestment: (id: string) => void;
+  addGoal: (goal: Omit<Goal, "id" | "createdAt">) => string;
+  updateGoal: (id: string, patch: Partial<Omit<Goal, "id">>) => void;
+  deleteGoal: (id: string) => void;
 }
 
 let repository: LedgerRepository | null = null;
@@ -174,20 +217,53 @@ export const useAppStore = create<AppState>((set, get) => {
     persist(file, data, set);
   };
 
+  const mutateLedger = (
+    updater: (
+      data: LedgerData,
+    ) => Partial<Pick<LedgerData, "expenses" | "accounts">>,
+  ): void => {
+    const current = get().data;
+    const patch = updater(current);
+    const base: LedgerData = { ...current, ...patch };
+    const accounts = recomputeBalances(base.accounts, base.expenses);
+    const accountsChanged = accounts.some(
+      (account, index) => account !== base.accounts[index],
+    );
+    const data: LedgerData = accountsChanged ? { ...base, accounts } : base;
+    set({ data });
+    if (patch.expenses) persist("expenses", data, set);
+    if (patch.accounts || accountsChanged) persist("accounts", data, set);
+  };
+
   const materializeNow = (): void => {
     const recurringResult = materializeRecurring(get().data.recurring);
     const subscriptionResult = materializeSubscriptions(get().data.subscriptions);
-    if (!recurringResult.changed && !subscriptionResult.changed) return;
+    const investmentResult = materializeInvestments(
+      get().data.recurringInvestments,
+    );
+    if (
+      !recurringResult.changed &&
+      !subscriptionResult.changed &&
+      !investmentResult.changed
+    ) {
+      return;
+    }
 
-    const data: LedgerData = {
+    const merged: LedgerData = {
       ...get().data,
       expenses: [
         ...recurringResult.newExpenses,
         ...subscriptionResult.newExpenses,
+        ...investmentResult.newExpenses,
         ...get().data.expenses,
       ],
       recurring: recurringResult.updatedRecurring,
       subscriptions: subscriptionResult.updatedSubscriptions,
+      recurringInvestments: investmentResult.updatedRecurring,
+    };
+    const data: LedgerData = {
+      ...merged,
+      accounts: recomputeBalances(merged.accounts, merged.expenses),
     };
     set({ data });
     if (recurringResult.changed) {
@@ -198,6 +274,11 @@ export const useAppStore = create<AppState>((set, get) => {
       persist("expenses", data, set);
       persist("subscriptions", data, set);
     }
+    if (investmentResult.changed) {
+      persist("expenses", data, set);
+      persist("recurringInvestments", data, set);
+    }
+    persist("accounts", data, set);
   };
 
   const loadData = async (session: AuthSession): Promise<void> => {
@@ -208,17 +289,27 @@ export const useAppStore = create<AppState>((set, get) => {
     const loaded = await repository.loadAll();
     const recurringResult = materializeRecurring(loaded.recurring);
     const subscriptionResult = materializeSubscriptions(loaded.subscriptions);
+    const investmentResult = materializeInvestments(loaded.recurringInvestments);
 
-    const data: LedgerData = {
+    const merged: LedgerData = {
       ...loaded,
       expenses: [
         ...recurringResult.newExpenses,
         ...subscriptionResult.newExpenses,
+        ...investmentResult.newExpenses,
         ...loaded.expenses,
       ],
       recurring: recurringResult.updatedRecurring,
       subscriptions: subscriptionResult.updatedSubscriptions,
+      recurringInvestments: investmentResult.updatedRecurring,
     };
+    const recomputed = recomputeBalances(merged.accounts, merged.expenses);
+    const accountsChanged = recomputed.some(
+      (account, index) => account !== merged.accounts[index],
+    );
+    const data: LedgerData = accountsChanged
+      ? { ...merged, accounts: recomputed }
+      : merged;
     set({ data, status: "ready", syncStatus: "synced" });
     if (recurringResult.changed) {
       persist("expenses", data, set);
@@ -228,6 +319,11 @@ export const useAppStore = create<AppState>((set, get) => {
       persist("expenses", data, set);
       persist("subscriptions", data, set);
     }
+    if (investmentResult.changed) {
+      persist("expenses", data, set);
+      persist("recurringInvestments", data, set);
+    }
+    if (accountsChanged) persist("accounts", data, set);
   };
 
   return {
@@ -274,23 +370,47 @@ export const useAppStore = create<AppState>((set, get) => {
 
     addExpense: (expense) => {
       const id = createId();
-      mutate("expenses", ({ expenses }) => [
-        {
-          tags: [],
-          attachments: [],
-          ...expense,
-          id,
-          createdAt: new Date().toISOString(),
-        },
-        ...expenses,
-      ]);
+      mutateLedger(({ expenses }) => ({
+        expenses: [
+          {
+            tags: [],
+            attachments: [],
+            affectsBalance: true,
+            ...expense,
+            id,
+            createdAt: new Date().toISOString(),
+          },
+          ...expenses,
+        ],
+      }));
+      return id;
+    },
+
+    addIncome: (income) => {
+      const id = createId();
+      mutateLedger(({ expenses }) => ({
+        expenses: [
+          {
+            tags: [],
+            attachments: [],
+            affectsBalance: true,
+            ...income,
+            type: "income" as const,
+            id,
+            createdAt: new Date().toISOString(),
+          },
+          ...expenses,
+        ],
+      }));
       return id;
     },
 
     updateExpense: (id, patch) =>
-      mutate("expenses", ({ expenses }) =>
-        expenses.map((item) => (item.id === id ? { ...item, ...patch } : item)),
-      ),
+      mutateLedger(({ expenses }) => ({
+        expenses: expenses.map((item) =>
+          item.id === id ? { ...item, ...patch } : item,
+        ),
+      })),
 
     deleteExpense: (id) => {
       const target = get().data.expenses.find((item) => item.id === id);
@@ -300,9 +420,9 @@ export const useAppStore = create<AppState>((set, get) => {
           void store.remove(attachment.id, attachment.mimeType);
         }
       }
-      mutate("expenses", ({ expenses }) =>
-        expenses.filter((item) => item.id !== id),
-      );
+      mutateLedger(({ expenses }) => ({
+        expenses: expenses.filter((item) => item.id !== id),
+      }));
     },
 
     addAttachment: async (expenseId, file) => {
@@ -456,24 +576,26 @@ export const useAppStore = create<AppState>((set, get) => {
 
     addAccount: (account) => {
       const id = createId();
-      mutate("accounts", ({ accounts }) => [
-        ...accounts,
-        { ...account, id, createdAt: new Date().toISOString() },
-      ]);
+      mutateLedger(({ accounts }) => ({
+        accounts: [
+          ...accounts,
+          { ...account, id, createdAt: new Date().toISOString() },
+        ],
+      }));
       return id;
     },
 
     updateAccount: (id, patch) =>
-      mutate("accounts", ({ accounts }) =>
-        accounts.map((account) =>
+      mutateLedger(({ accounts }) => ({
+        accounts: accounts.map((account) =>
           account.id === id ? { ...account, ...patch } : account,
         ),
-      ),
+      })),
 
     deleteAccount: (id) =>
-      mutate("accounts", ({ accounts }) =>
-        accounts.filter((account) => account.id !== id),
-      ),
+      mutateLedger(({ accounts }) => ({
+        accounts: accounts.filter((account) => account.id !== id),
+      })),
 
     addSpace: (space) => {
       const id = createId();
@@ -536,39 +658,59 @@ export const useAppStore = create<AppState>((set, get) => {
     updateSettings: (patch) =>
       mutate("settings", ({ settings }) => ({ ...settings, ...patch })),
 
-    addTransfer: (sourceAccountId, destinationAccountId, amount, date, description) => {
+    addTransfer: (
+      sourceAccountId,
+      destinationAccountId,
+      amount,
+      date,
+      description,
+      affectsBalance = true,
+    ) => {
       const id = createId();
-      
-      // 1. Create linked transfer transaction
-      mutate("expenses", ({ expenses }) => [
-        {
-          id,
-          type: "transfer" as const,
-          description,
-          amount,
-          category: "Other",
-          date,
-          accountId: sourceAccountId,
-          transferAccountId: destinationAccountId,
-          tags: [],
-          attachments: [],
-          createdAt: new Date().toISOString(),
-        },
-        ...expenses,
-      ]);
+      mutateLedger(({ expenses }) => ({
+        expenses: [
+          {
+            id,
+            type: "transfer" as const,
+            description,
+            amount,
+            category: "Other",
+            date,
+            accountId: sourceAccountId,
+            transferAccountId: destinationAccountId,
+            affectsBalance,
+            tags: [],
+            attachments: [],
+            createdAt: new Date().toISOString(),
+          },
+          ...expenses,
+        ],
+      }));
+    },
 
-      // 2. Decrease source balance and increase destination balance
-      mutate("accounts", ({ accounts }) =>
-        accounts.map((acc) => {
-          if (acc.id === sourceAccountId) {
-            return { ...acc, balance: acc.balance - amount };
-          }
-          if (acc.id === destinationAccountId) {
-            return { ...acc, balance: acc.balance + amount };
-          }
-          return acc;
-        })
-      );
+    addCreditCardPayment: ({ cardId, fromAccountId, amount, date, notes }) => {
+      const id = createId();
+      const card = get().data.accounts.find((acc) => acc.id === cardId);
+      mutateLedger(({ expenses }) => ({
+        expenses: [
+          {
+            id,
+            type: "cc_payment" as const,
+            description: card ? `Payment · ${card.name}` : "Card payment",
+            amount,
+            category: "Bills" as const,
+            date,
+            accountId: fromAccountId,
+            paymentTargetId: cardId,
+            affectsBalance: true,
+            notes: notes?.trim() || undefined,
+            tags: [],
+            attachments: [],
+            createdAt: new Date().toISOString(),
+          },
+          ...expenses,
+        ],
+      }));
     },
 
     addDebitCard: (accountId, card) => {
@@ -702,5 +844,78 @@ export const useAppStore = create<AppState>((set, get) => {
         ),
       );
     },
+
+    addInvestment: ({
+      name,
+      fromAccountId,
+      investmentAccountId,
+      amount,
+      units,
+      date,
+      notes,
+      affectsBalance = true,
+    }) => {
+      const id = createId();
+      mutateLedger(({ expenses }) => ({
+        expenses: [
+          {
+            id,
+            type: "investment" as const,
+            description: name,
+            amount,
+            category: "Investments" as const,
+            date,
+            accountId: fromAccountId,
+            transferAccountId: investmentAccountId,
+            units,
+            affectsBalance,
+            notes: notes?.trim() || undefined,
+            tags: [],
+            attachments: [],
+            createdAt: new Date().toISOString(),
+          },
+          ...expenses,
+        ],
+      }));
+    },
+
+    addRecurringInvestment: (item) => {
+      mutate("recurringInvestments", ({ recurringInvestments }) => [
+        ...recurringInvestments,
+        { ...item, id: createId(), createdAt: new Date().toISOString() },
+      ]);
+      materializeNow();
+    },
+
+    updateRecurringInvestment: (id, patch) => {
+      mutate("recurringInvestments", ({ recurringInvestments }) =>
+        recurringInvestments.map((item) =>
+          item.id === id ? { ...item, ...patch } : item,
+        ),
+      );
+      materializeNow();
+    },
+
+    deleteRecurringInvestment: (id) =>
+      mutate("recurringInvestments", ({ recurringInvestments }) =>
+        recurringInvestments.filter((item) => item.id !== id),
+      ),
+
+    addGoal: (goal) => {
+      const id = createId();
+      mutate("goals", ({ goals }) => [
+        ...goals,
+        { ...goal, id, createdAt: new Date().toISOString() },
+      ]);
+      return id;
+    },
+
+    updateGoal: (id, patch) =>
+      mutate("goals", ({ goals }) =>
+        goals.map((goal) => (goal.id === id ? { ...goal, ...patch } : goal)),
+      ),
+
+    deleteGoal: (id) =>
+      mutate("goals", ({ goals }) => goals.filter((goal) => goal.id !== id)),
   };
 });

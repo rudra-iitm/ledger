@@ -15,6 +15,21 @@ export const CATEGORIES = [
 export const categorySchema = z.enum(CATEGORIES);
 export type Category = z.infer<typeof categorySchema>;
 
+export const INCOME_CATEGORIES = [
+  "Salary",
+  "Freelance",
+  "Business",
+  "Interest",
+  "Dividends",
+  "Refunds",
+  "Gifts",
+  "Investments",
+  "Other",
+] as const;
+
+export const incomeCategorySchema = z.enum(INCOME_CATEGORIES);
+export type IncomeCategory = z.infer<typeof incomeCategorySchema>;
+
 export const ACCOUNT_TYPES = [
   "cash",
   "bank",
@@ -27,6 +42,67 @@ export const ACCOUNT_TYPES = [
 
 export const accountTypeSchema = z.enum(ACCOUNT_TYPES);
 export type AccountType = z.infer<typeof accountTypeSchema>;
+
+export const ASSET_TYPES = [
+  "gold",
+  "silver",
+  "mutual_fund",
+  "etf",
+  "stock",
+  "sip",
+  "crypto",
+  "other",
+] as const;
+
+export const assetTypeSchema = z.enum(ASSET_TYPES);
+export type AssetType = z.infer<typeof assetTypeSchema>;
+
+export const ASSET_TYPE_LABELS: Record<AssetType, string> = {
+  gold: "Gold",
+  silver: "Silver",
+  mutual_fund: "Mutual Fund",
+  etf: "ETF",
+  stock: "Stock",
+  sip: "SIP",
+  crypto: "Crypto",
+  other: "Other",
+};
+
+export const ASSET_UNIT_LABELS: Record<AssetType, string> = {
+  gold: "g",
+  silver: "g",
+  mutual_fund: "units",
+  etf: "units",
+  stock: "shares",
+  sip: "units",
+  crypto: "coins",
+  other: "units",
+};
+
+export const INVESTMENT_FREQUENCIES = [
+  "daily",
+  "weekly",
+  "monthly",
+  "quarterly",
+  "yearly",
+] as const;
+
+export const investmentFrequencySchema = z.enum(INVESTMENT_FREQUENCIES);
+export type InvestmentFrequency = z.infer<typeof investmentFrequencySchema>;
+
+export const GOAL_TYPES = [
+  "gold",
+  "silver",
+  "emergency",
+  "house",
+  "retirement",
+  "education",
+  "travel",
+  "custom",
+] as const;
+
+export const goalTypeSchema = z.enum(GOAL_TYPES);
+export type GoalType = z.infer<typeof goalTypeSchema>;
 
 export const RECURRENCE_FREQUENCIES = [
   "daily",
@@ -87,12 +163,19 @@ export const accountSchema = z.object({
   name: z.string().min(1),
   type: accountTypeSchema,
   balance: z.number(),
+  openingBalance: z.number().default(0),
+  openingDate: isoDate.optional(),
   currency: z.string().min(1),
   icon: z.string().min(1),
   archived: z.boolean().default(false),
   creditLimit: z.number().optional(),
   statementBalance: z.number().optional(),
+  statementDueDate: isoDate.optional(),
+  minimumDue: z.number().optional(),
   minimumBalance: z.number().optional(),
+  assetType: assetTypeSchema.optional(),
+  unitLabel: z.string().optional(),
+  currentPrice: z.number().nonnegative().optional(),
   holderName: z.string().optional(),
   accountNumber: z.string().optional(),
   ifscCode: z.string().optional(),
@@ -138,8 +221,15 @@ export const expenseSchema = z.object({
   recurringId: z.string().optional(),
   subscriptionId: z.string().optional(),
   accountId: z.string().optional(),
-  type: z.enum(["expense", "income", "transfer"]).default("expense"),
+  type: z
+    .enum(["expense", "income", "transfer", "cc_payment", "investment"])
+    .default("expense"),
   transferAccountId: z.string().optional(),
+  paymentTargetId: z.string().optional(),
+  units: z.number().nonnegative().optional(),
+  incomeCategory: incomeCategorySchema.optional(),
+  source: z.string().optional(),
+  affectsBalance: z.boolean().default(true),
   debitCardId: z.string().optional(),
   spaceId: z.string().optional(),
   tags: z.array(z.string().min(1)).default([]),
@@ -250,12 +340,48 @@ export type LendBorrow = z.infer<typeof lendBorrowSchema>;
 
 export const lendBorrowsFileSchema = z.array(lendBorrowSchema);
 
+export const recurringInvestmentSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().min(1),
+  assetType: assetTypeSchema,
+  amount: z.number().positive(),
+  units: z.number().nonnegative().optional(),
+  fromAccountId: z.string().min(1),
+  investmentAccountId: z.string().min(1),
+  frequency: investmentFrequencySchema,
+  dayOfMonth: z.number().int().min(1).max(31).default(1),
+  weekday: z.number().int().min(0).max(6).optional(),
+  startDate: isoDate,
+  lastMaterializedDate: isoDate.optional(),
+  notes: z.string().optional(),
+  active: z.boolean().default(true),
+  createdAt: z.string().min(1),
+});
+export type RecurringInvestment = z.infer<typeof recurringInvestmentSchema>;
+
+export const goalSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().min(1),
+  type: goalTypeSchema,
+  targetAmount: z.number().positive(),
+  accountIds: z.array(z.string().min(1)).default([]),
+  targetDate: isoDate.optional(),
+  icon: z.string().min(1).default("🎯"),
+  notes: z.string().optional(),
+  createdAt: z.string().min(1),
+});
+export type Goal = z.infer<typeof goalSchema>;
+
+export const recurringInvestmentsFileSchema = z.array(recurringInvestmentSchema);
+export const goalsFileSchema = z.array(goalSchema);
+
 export const DEFAULT_ACCOUNTS: Account[] = [
   {
     id: "acc-cash",
     name: "Cash",
     type: "cash",
     balance: 0,
+    openingBalance: 0,
     currency: "₹",
     icon: "💵",
     archived: false,
@@ -267,6 +393,7 @@ export const DEFAULT_ACCOUNTS: Account[] = [
     name: "Bank Account",
     type: "bank",
     balance: 0,
+    openingBalance: 0,
     currency: "₹",
     icon: "🏦",
     archived: false,

@@ -8,7 +8,7 @@ import {
 } from "@/components/fields/time-range-picker";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { breakdownByCategory, filterExpenses, totalSpending } from "@/lib/domain/analytics";
+import { breakdownByCategory, filterExpenses, spendRows, totalSpending } from "@/lib/domain/analytics";
 import { categoryBudgetSummaries } from "@/lib/domain/budget";
 import { resolveRange, TIME_PRESET_LABELS } from "@/lib/domain/time-ranges";
 import { formatMoney } from "@/lib/domain/money";
@@ -47,7 +47,7 @@ export function ReportsView() {
   const exportCsv = () =>
     downloadCsv(
       "ledger-report.csv",
-      expensesToCsv(filtered, {
+      expensesToCsv(spendRows(filtered), {
         accounts,
         currency: settings.currency,
       }),
@@ -56,7 +56,7 @@ export function ReportsView() {
   const exportPdf = () =>
     void downloadReportPdf(
       "ledger-report.pdf",
-      buildReportData("Spending report", periodLabel, filtered),
+      buildReportData("Spending report", periodLabel, spendRows(filtered)),
       settings.currency,
     );
 

@@ -8,6 +8,8 @@ import type {
   Space,
   Subscription,
   Group,
+  RecurringInvestment,
+  Goal,
 } from "@/lib/domain/types";
 import { ActionSheet } from "./action-sheet";
 import { AccountSheet } from "./account-sheet";
@@ -20,10 +22,16 @@ import { SearchSheet } from "./search-sheet";
 import { SpaceSheet } from "./space-sheet";
 import { SubscriptionSheet } from "./subscription-sheet";
 import { TransferSheet } from "./transfer-sheet";
+import { IncomeSheet } from "./income-sheet";
+import { CreditCardPaymentSheet } from "./cc-payment-sheet";
+import { InvestmentSheet } from "./investment-sheet";
+import { RecurringInvestmentSheet } from "./recurring-investment-sheet";
+import { GoalSheet } from "./goal-sheet";
 
 type ActiveSheet =
   | { kind: "actions" }
   | { kind: "expense"; expense?: Expense; defaults?: Partial<Expense> }
+  | { kind: "income"; income?: Expense }
   | { kind: "recurring"; recurring?: RecurringExpense }
   | { kind: "group-expense"; groupId: string }
   | { kind: "budget" }
@@ -31,11 +39,20 @@ type ActiveSheet =
   | { kind: "space"; space?: Space }
   | { kind: "account"; account?: Account }
   | { kind: "subscription"; subscription?: Subscription }
+  | { kind: "cc-payment"; cardId: string }
+  | { kind: "investment"; investmentAccountId?: string }
+  | { kind: "recurring-investment"; recurring?: RecurringInvestment }
+  | { kind: "goal"; goal?: Goal }
   | null;
 
 interface SheetApi {
   openActions: () => void;
   openExpense: (expense?: Expense, defaults?: Partial<Expense>) => void;
+  openIncome: (income?: Expense) => void;
+  openCreditCardPayment: (cardId: string) => void;
+  openInvestment: (investmentAccountId?: string) => void;
+  openRecurringInvestment: (recurring?: RecurringInvestment) => void;
+  openGoal: (goal?: Goal) => void;
   openRecurring: (recurring?: RecurringExpense) => void;
   openGroup: (group?: Group) => void;
   openGroupExpense: (groupId: string) => void;
@@ -74,6 +91,14 @@ export function SheetProvider({ children }: { children: React.ReactNode }) {
       openActions: () => setActive({ kind: "actions" }),
       openExpense: (expense, defaults) =>
         setActive({ kind: "expense", expense, defaults }),
+      openIncome: (income) => setActive({ kind: "income", income }),
+      openCreditCardPayment: (cardId) =>
+        setActive({ kind: "cc-payment", cardId }),
+      openInvestment: (investmentAccountId) =>
+        setActive({ kind: "investment", investmentAccountId }),
+      openRecurringInvestment: (recurring) =>
+        setActive({ kind: "recurring-investment", recurring }),
+      openGoal: (goal) => setActive({ kind: "goal", goal }),
       openRecurring: (recurring) => setActive({ kind: "recurring", recurring }),
       openGroup: (data) => setGroup({ open: true, data }),
       openGroupExpense: (groupId) => setActive({ kind: "group-expense", groupId }),
@@ -97,6 +122,35 @@ export function SheetProvider({ children }: { children: React.ReactNode }) {
         open={active?.kind === "expense"}
         expense={active?.kind === "expense" ? active.expense : undefined}
         defaults={active?.kind === "expense" ? active.defaults : undefined}
+        onClose={closeSheet}
+      />
+      <IncomeSheet
+        open={active?.kind === "income"}
+        income={active?.kind === "income" ? active.income : undefined}
+        onClose={closeSheet}
+      />
+      <CreditCardPaymentSheet
+        open={active?.kind === "cc-payment"}
+        cardId={active?.kind === "cc-payment" ? active.cardId : null}
+        onClose={closeSheet}
+      />
+      <InvestmentSheet
+        open={active?.kind === "investment"}
+        defaultInvestmentAccountId={
+          active?.kind === "investment" ? active.investmentAccountId : undefined
+        }
+        onClose={closeSheet}
+      />
+      <RecurringInvestmentSheet
+        open={active?.kind === "recurring-investment"}
+        recurring={
+          active?.kind === "recurring-investment" ? active.recurring : undefined
+        }
+        onClose={closeSheet}
+      />
+      <GoalSheet
+        open={active?.kind === "goal"}
+        goal={active?.kind === "goal" ? active.goal : undefined}
         onClose={closeSheet}
       />
       <RecurringSheet

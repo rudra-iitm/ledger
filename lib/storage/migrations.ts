@@ -1,5 +1,5 @@
 import type { DataFile } from "./adapter";
-import { clampedDateInMonth } from "../domain/dates";
+import { clampedDateInMonth, todayISO } from "../domain/dates";
 
 type UnknownRecord = Record<string, unknown>;
 
@@ -12,6 +12,17 @@ function migrateExpense(raw: unknown): unknown {
   const next: UnknownRecord = { tags: [], attachments: [], ...raw };
   if ("paymentMethodId" in next && !("accountId" in next)) {
     delete next.paymentMethodId;
+  }
+  if (!("affectsBalance" in next)) next.affectsBalance = true;
+  return next;
+}
+
+function migrateAccount(raw: unknown): unknown {
+  if (!isRecord(raw)) return raw;
+  const next: UnknownRecord = { ...raw };
+  if (!("openingBalance" in next)) {
+    next.openingBalance = typeof next.balance === "number" ? next.balance : 0;
+    if (!("openingDate" in next)) next.openingDate = todayISO();
   }
   return next;
 }
@@ -68,6 +79,8 @@ export function migrate(file: DataFile, raw: unknown): unknown {
       return Array.isArray(raw) ? raw.map(migrateRecurring) : raw;
     case "groups":
       return Array.isArray(raw) ? raw.map(migrateGroup) : raw;
+    case "accounts":
+      return Array.isArray(raw) ? raw.map(migrateAccount) : raw;
     case "budgets":
       return migrateBudgets(raw);
     case "settings":

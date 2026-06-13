@@ -7,6 +7,7 @@ import {
   ChevronRight,
   FileText,
   LayoutGrid,
+  LineChart,
   ReceiptText,
   RefreshCw,
   Target,
@@ -134,6 +135,7 @@ export function DashboardView() {
         {[
           { href: "/spaces", label: "Spaces", icon: LayoutGrid },
           { href: "/accounts", label: "Accounts", icon: Wallet },
+          { href: "/investments", label: "Investments", icon: LineChart },
           { href: "/subscriptions", label: "Subscriptions", icon: RefreshCw },
           { href: "/reviews", label: "Monthly Review", icon: CalendarCheck },
           { href: "/groups", label: "Groups", icon: Users },

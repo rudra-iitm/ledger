@@ -24,6 +24,9 @@ import { CATEGORY_COLORS } from "@/lib/domain/category-meta";
 import {
   breakdownByCategory,
   filterExpenses,
+  incomeByCategory,
+  incomeVsExpense,
+  spendRows,
   totalSpending,
 } from "@/lib/domain/analytics";
 import { resolveRange } from "@/lib/domain/time-ranges";
@@ -31,6 +34,7 @@ import { formatMoney } from "@/lib/domain/money";
 import { buildReportData, expensesToCsv } from "@/lib/domain/reports";
 import { downloadCsv, downloadReportPdf } from "@/lib/export/files";
 import { useAppStore } from "@/lib/store/app-store";
+import { cn } from "@/lib/utils";
 
 const CategoryDonut = dynamic(
   () => import("@/components/charts/category-donut").then((m) => m.CategoryDonut),
@@ -68,10 +72,12 @@ export function AnalyticsView() {
 
   const total = totalSpending(filtered);
   const breakdown = useMemo(() => breakdownByCategory(filtered), [filtered]);
+  const flow = useMemo(() => incomeVsExpense(filtered), [filtered]);
+  const incomeBreakdown = useMemo(() => incomeByCategory(filtered), [filtered]);
 
   const accountBreakdown = useMemo(() => {
     const totals = new Map<string, number>();
-    for (const expense of filtered) {
+    for (const expense of spendRows(filtered)) {
       if (!expense.accountId) continue;
       totals.set(
         expense.accountId,
@@ -87,7 +93,10 @@ export function AnalyticsView() {
   const exportCsv = () => {
     downloadCsv(
       "ledger-expenses.csv",
-      expensesToCsv(filtered, { accounts, currency: settings.currency }),
+      expensesToCsv(spendRows(filtered), {
+        accounts,
+        currency: settings.currency,
+      }),
     );
   };
 
@@ -97,7 +106,7 @@ export function AnalyticsView() {
       buildReportData(
         "Spending report",
         `${range.start ?? "Beginning"} → ${range.end ?? "Today"}`,
-        filtered,
+        spendRows(filtered),
       ),
       settings.currency,
     );
@@ -132,7 +141,59 @@ export function AnalyticsView() {
 
       <InsightsStrip />
 
-      {filtered.length === 0 ? (
+      {(flow.income > 0 || flow.expense > 0) && (
+        <section aria-label="Income vs expense" className="flex flex-col gap-3">
+          <div className="grid grid-cols-3 gap-3">
+            <div className="flex flex-col gap-0.5 rounded-2xl border border-border bg-card px-4 py-3 shadow-soft">
+              <span className="text-[12px] text-muted-foreground">Income</span>
+              <span className="text-[15px] font-semibold tabular-nums text-emerald-500">
+                +{formatMoney(flow.income, settings.currency)}
+              </span>
+            </div>
+            <div className="flex flex-col gap-0.5 rounded-2xl border border-border bg-card px-4 py-3 shadow-soft">
+              <span className="text-[12px] text-muted-foreground">Expense</span>
+              <span className="text-[15px] font-semibold tabular-nums">
+                {formatMoney(flow.expense, settings.currency)}
+              </span>
+            </div>
+            <div className="flex flex-col gap-0.5 rounded-2xl border border-border bg-card px-4 py-3 shadow-soft">
+              <span className="text-[12px] text-muted-foreground">Net</span>
+              <span
+                className={cn(
+                  "text-[15px] font-semibold tabular-nums",
+                  flow.net >= 0 ? "text-emerald-500" : "text-destructive",
+                )}
+              >
+                {flow.net >= 0 ? "+" : ""}
+                {formatMoney(flow.net, settings.currency)}
+              </span>
+            </div>
+          </div>
+          {incomeBreakdown.length > 0 && (
+            <ul className="flex flex-col gap-1">
+              {incomeBreakdown.map((entry) => (
+                <li
+                  key={entry.category}
+                  className="flex items-center justify-between px-2 py-2 text-[15px]"
+                >
+                  <span className="flex items-center gap-2">
+                    <span
+                      aria-hidden
+                      className="size-3 shrink-0 rounded-full bg-emerald-500"
+                    />
+                    {entry.category}
+                  </span>
+                  <span className="font-semibold tabular-nums text-emerald-500">
+                    +{formatMoney(entry.total, settings.currency)}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      )}
+
+      {spendRows(filtered).length === 0 ? (
         <EmptyState
           icon={BarChart3}
           title="No spending in this period"

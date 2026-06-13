@@ -12,6 +12,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { AccountSelect } from "@/components/fields/account-select";
+import { AffectBalanceToggle } from "@/components/fields/affect-balance-toggle";
 import { DateField } from "@/components/fields/date-field";
 import { useAppStore } from "@/lib/store/app-store";
 import { todayISO } from "@/lib/domain/dates";
@@ -30,6 +31,7 @@ export function TransferSheet({
   const [sourceAccountId, setSourceAccountId] = useState<string | undefined>();
   const [destinationAccountId, setDestinationAccountId] = useState<string | undefined>();
   const [date, setDate] = useState(todayISO());
+  const [affectsBalance, setAffectsBalance] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -40,6 +42,7 @@ export function TransferSheet({
     setSourceAccountId(undefined);
     setDestinationAccountId(undefined);
     setDate(todayISO());
+    setAffectsBalance(true);
     setError(null);
     setIsSubmitting(false);
   }, [open]);
@@ -72,7 +75,8 @@ export function TransferSheet({
         destinationAccountId,
         parsedAmount,
         date,
-        "Transfer"
+        "Transfer",
+        affectsBalance,
       );
       toast.success("Transfer completed");
       onClose();
@@ -153,6 +157,11 @@ export function TransferSheet({
               onChange={(next) => next && setDate(next)}
             />
           </div>
+
+          <AffectBalanceToggle
+            checked={affectsBalance}
+            onChange={setAffectsBalance}
+          />
 
           {error && (
             <p role="alert" className="-mt-2 text-sm text-destructive">

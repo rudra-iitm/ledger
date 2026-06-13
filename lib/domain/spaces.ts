@@ -1,11 +1,14 @@
 import type { Expense, Space } from "./types";
 import { roundMoney } from "./money";
+import { isSpend } from "./transactions";
 
 export function spaceExpenses(
   expenses: Expense[],
   spaceId: string,
 ): Expense[] {
-  return expenses.filter((expense) => expense.spaceId === spaceId);
+  return expenses.filter(
+    (expense) => isSpend(expense) && expense.spaceId === spaceId,
+  );
 }
 
 export interface SpaceSummary {

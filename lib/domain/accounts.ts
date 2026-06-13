@@ -1,6 +1,7 @@
 import type { Account, AccountType, Expense } from "./types";
 import { currentMonth, monthOf } from "./dates";
 import { roundMoney } from "./money";
+import { isSpend } from "./transactions";
 
 export function accountExpenses(
   expenses: Expense[],
@@ -22,13 +23,14 @@ export function accountSummary(
   month: string = currentMonth(),
 ): AccountSummary {
   const owned = accountExpenses(expenses, account.id);
+  const spend = owned.filter(isSpend);
   const monthlySpending = roundMoney(
-    owned
+    spend
       .filter((expense) => monthOf(expense.date) === month)
       .reduce((total, expense) => total + expense.amount, 0),
   );
   const totalSpending = roundMoney(
-    owned.reduce((total, expense) => total + expense.amount, 0),
+    spend.reduce((total, expense) => total + expense.amount, 0),
   );
   return {
     balance: account.balance,
@@ -50,6 +52,7 @@ export function spendingByAccountType(
   const typeById = new Map(accounts.map((account) => [account.id, account.type]));
   const totals = new Map<AccountType, number>();
   for (const expense of expenses) {
+    if (!isSpend(expense)) continue;
     if (!expense.accountId) continue;
     const type = typeById.get(expense.accountId);
     if (!type) continue;

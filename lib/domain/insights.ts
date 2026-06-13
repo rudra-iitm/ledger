@@ -2,6 +2,7 @@ import type { Category, Expense } from "./types";
 import { currentMonth, monthOf, previousMonth } from "./dates";
 import { roundMoney } from "./money";
 import { breakdownByCategory, totalSpending } from "./analytics";
+import { isSpend } from "./transactions";
 
 export type InsightTone = "neutral" | "positive" | "negative";
 
@@ -14,7 +15,9 @@ export interface Insight {
 }
 
 function expensesInMonth(expenses: Expense[], month: string): Expense[] {
-  return expenses.filter((expense) => monthOf(expense.date) === month);
+  return expenses.filter(
+    (expense) => isSpend(expense) && monthOf(expense.date) === month,
+  );
 }
 
 export function buildInsights(

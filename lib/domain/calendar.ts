@@ -8,6 +8,7 @@ import {
   weekdayOf,
 } from "./dates";
 import { roundMoney } from "./money";
+import { isSpend } from "./transactions";
 
 export interface CalendarDay {
   date: string;
@@ -24,6 +25,7 @@ export interface DayTotal {
 export function dailyTotalsMap(expenses: Expense[]): Map<string, DayTotal> {
   const totals = new Map<string, DayTotal>();
   for (const expense of expenses) {
+    if (!isSpend(expense)) continue;
     const entry = totals.get(expense.date) ?? { total: 0, count: 0 };
     entry.total = roundMoney(entry.total + expense.amount);
     entry.count += 1;

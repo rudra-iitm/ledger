@@ -3,15 +3,22 @@
 import { useMemo } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { ArrowLeft, Pencil, Wallet } from "lucide-react";
+import { ArrowLeft, CreditCard, Pencil, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/empty-state";
 import { ExpenseRow } from "@/components/expense-row";
 import { useSheets } from "@/components/sheets/sheet-context";
 import { AccountCard } from "@/components/account-card";
 import { accountExpenses, accountSummary } from "@/lib/domain/accounts";
+import {
+  availableCredit,
+  remainingStatement,
+  statementStatus,
+  utilization,
+} from "@/lib/domain/balances";
 import { formatDisplayDate } from "@/lib/domain/dates";
 import { formatMoney } from "@/lib/domain/money";
+import type { Account, Expense } from "@/lib/domain/types";
 import { useAppStore } from "@/lib/store/app-store";
 import { AccountMetadataView } from "@/components/account-metadata";
 import { DebitCardsSection } from "@/components/debit-cards-section";
@@ -25,12 +32,171 @@ function Stat({ label, value }: { label: string; value: string }) {
   );
 }
 
+const STATUS_STYLES: Record<string, string> = {
+  Paid: "bg-emerald-500/15 text-emerald-500",
+  "Partially Paid": "bg-amber-500/15 text-amber-500",
+  Unpaid: "bg-red-500/15 text-red-500",
+};
+
+function CreditStatement({
+  account,
+  rows,
+  currency,
+  onPay,
+}: {
+  account: Account;
+  rows: Expense[];
+  currency: string;
+  onPay: () => void;
+}) {
+  const outstanding = Math.max(0, account.balance);
+  const available = availableCredit(account);
+  const util = utilization(account);
+  const status = statementStatus(account, rows);
+  const remaining = remainingStatement(account, rows);
+
+  return (
+    <section className="flex flex-col gap-4 rounded-2xl border border-border bg-card px-5 py-5 shadow-soft">
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-medium text-muted-foreground">Statement</h3>
+        <span
+          className={`rounded-full px-2.5 py-1 text-[12px] font-medium ${STATUS_STYLES[status]}`}
+        >
+          {status}
+        </span>
+      </div>
+
+      <div className="grid grid-cols-2 gap-x-4 gap-y-3">
+        <Field label="Outstanding" value={formatMoney(outstanding, currency)} />
+        {account.creditLimit !== undefined && (
+          <Field
+            label="Credit limit"
+            value={formatMoney(account.creditLimit, currency)}
+          />
+        )}
+        {available !== null && (
+          <Field
+            label="Available credit"
+            value={formatMoney(available, currency)}
+          />
+        )}
+        {account.statementBalance !== undefined && (
+          <Field
+            label="Statement balance"
+            value={formatMoney(account.statementBalance, currency)}
+          />
+        )}
+        {remaining > 0 && (
+          <Field
+            label="Statement due"
+            value={formatMoney(remaining, currency)}
+          />
+        )}
+        {account.minimumDue !== undefined && (
+          <Field
+            label="Minimum due"
+            value={formatMoney(account.minimumDue, currency)}
+          />
+        )}
+        {account.statementDueDate && (
+          <Field
+            label="Due date"
+            value={formatDisplayDate(account.statementDueDate)}
+          />
+        )}
+      </div>
+
+      {util !== null && (
+        <div className="flex flex-col gap-1.5">
+          <div className="flex items-center justify-between text-[12px] text-muted-foreground">
+            <span>Utilization</span>
+            <span className="tabular-nums">{util}%</span>
+          </div>
+          <div className="h-2 w-full overflow-hidden rounded-full bg-muted/50">
+            <div
+              className={`h-full rounded-full transition-all duration-500 ${
+                util >= 80
+                  ? "bg-red-500"
+                  : util >= 50
+                    ? "bg-amber-500"
+                    : "bg-emerald-500"
+              }`}
+              style={{ width: `${util}%` }}
+            />
+          </div>
+        </div>
+      )}
+
+      <Button onClick={onPay} disabled={outstanding <= 0}>
+        <CreditCard aria-hidden />
+        Pay bill
+      </Button>
+    </section>
+  );
+}
+
+function Field({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex flex-col gap-0.5">
+      <span className="text-[12px] text-muted-foreground">{label}</span>
+      <span className="text-[15px] font-semibold tabular-nums">{value}</span>
+    </div>
+  );
+}
+
+function PaymentHistory({
+  account,
+  rows,
+  accounts,
+  currency,
+}: {
+  account: Account;
+  rows: Expense[];
+  accounts: Account[];
+  currency: string;
+}) {
+  const payments = rows
+    .filter((row) => row.type === "cc_payment" && row.paymentTargetId === account.id)
+    .sort((a, b) => b.date.localeCompare(a.date));
+  if (payments.length === 0) return null;
+
+  const accountName = (id?: string) =>
+    accounts.find((item) => item.id === id)?.name ?? "Account";
+
+  return (
+    <section aria-label="Payment history" className="flex flex-col gap-2">
+      <h3 className="text-sm font-medium text-muted-foreground">Payments</h3>
+      <ul className="flex flex-col gap-1">
+        {payments.map((payment) => (
+          <li
+            key={payment.id}
+            className="flex items-center justify-between rounded-2xl border border-border bg-card px-4 py-3 shadow-soft"
+          >
+            <span className="flex flex-col">
+              <span className="text-[15px] font-medium">
+                {accountName(payment.accountId)}
+              </span>
+              <span className="text-[13px] text-muted-foreground">
+                {formatDisplayDate(payment.date)}
+              </span>
+            </span>
+            <span className="text-[15px] font-semibold tabular-nums text-emerald-500">
+              −{formatMoney(payment.amount, currency)}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
 export function AccountDetailView() {
   const searchParams = useSearchParams();
   const accountId = searchParams.get("id");
   const account = useAppStore((state) =>
     state.data.accounts.find((item) => item.id === accountId),
   );
+  const accounts = useAppStore((state) => state.data.accounts);
   const expenses = useAppStore((state) => state.data.expenses);
   const currency = useAppStore((state) => state.data.settings.currency);
   const sheets = useSheets();
@@ -88,6 +254,23 @@ export function AccountDetailView() {
       <div className="mb-4">
         <AccountCard account={account} currency={currency} />
       </div>
+
+      {account.type === "credit_card" && (
+        <>
+          <CreditStatement
+            account={account}
+            rows={expenses}
+            currency={currency}
+            onPay={() => sheets.openCreditCardPayment(account.id)}
+          />
+          <PaymentHistory
+            account={account}
+            rows={expenses}
+            accounts={accounts}
+            currency={currency}
+          />
+        </>
+      )}
 
       <AccountMetadataView account={account} currency={currency} />
       

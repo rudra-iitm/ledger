@@ -17,6 +17,7 @@ import { breakdownByCategory, totalSpending } from "./analytics";
 import { rankSpacesBySpending } from "./spaces";
 import { rankAccountsBySpending } from "./accounts";
 import { monthlyCost, totalMonthlyCost } from "./subscriptions";
+import { isSpend } from "./transactions";
 
 export interface ReviewOverview {
   spent: number;
@@ -80,9 +81,9 @@ export function buildMonthlyReview(
   const money = (value: number) =>
     `${currency}${Math.round(value).toLocaleString("en-IN")}`;
 
-  const current = monthExpenses(expenses, month);
+  const current = monthExpenses(expenses, month).filter(isSpend);
   const prevMonth = previousMonth(month);
-  const previous = monthExpenses(expenses, prevMonth);
+  const previous = monthExpenses(expenses, prevMonth).filter(isSpend);
 
   const spent = totalSpending(current);
   const remaining = roundMoney(monthlyBudget - spent);
