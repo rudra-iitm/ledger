@@ -16,7 +16,7 @@ crons = ["0 9 * * *"]
 #   npx wrangler kv namespace create PUSH
 [[kv_namespaces]]
 binding = "PUSH"
-id = "REPLACE_WITH_KV_NAMESPACE_ID"
+id = "c4373c213846428dac867a9f1296f7a1"
 
 # Secrets (do NOT put these here). Set them with:
 #   npx wrangler secret put GITHUB_CLIENT_ID
