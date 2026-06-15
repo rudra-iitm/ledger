@@ -2,11 +2,7 @@
 
 import {
   CalendarClock,
-  LayoutGrid,
   ReceiptText,
-  RefreshCw,
-  Target,
-  Users,
   ArrowRightLeft,
   TrendingUp,
   LineChart,
@@ -46,34 +42,10 @@ const ACTIONS = [
     action: "investment",
   },
   {
-    icon: RefreshCw,
-    label: "New subscription",
-    description: "Netflix, Spotify, and more",
-    action: "subscription",
-  },
-  {
-    icon: LayoutGrid,
-    label: "New space",
-    description: "Group expenses by trip or project",
-    action: "space",
-  },
-  {
     icon: CalendarClock,
     label: "Add recurring",
     description: "Rent, bills, instalments",
     action: "recurring",
-  },
-  {
-    icon: Users,
-    label: "New group",
-    description: "Split bills with friends",
-    action: "group",
-  },
-  {
-    icon: Target,
-    label: "Set budget",
-    description: "Monthly spending limit",
-    action: "budget",
   },
 ] as const;
 
@@ -90,11 +62,7 @@ export function ActionSheet({
     if (action === "expense") sheets.openExpense();
     if (action === "income") sheets.openIncome();
     if (action === "investment") sheets.openInvestment();
-    if (action === "subscription") sheets.openSubscription();
-    if (action === "space") sheets.openSpace();
     if (action === "recurring") sheets.openRecurring();
-    if (action === "group") sheets.openGroup();
-    if (action === "budget") sheets.openBudget();
     if (action === "transfer") sheets.openTransfer();
   };
 

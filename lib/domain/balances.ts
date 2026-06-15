@@ -6,12 +6,16 @@ export function isLiability(account: Account): boolean {
 }
 
 export function signedDelta(row: Expense, accountId: string): number {
-  if (row.affectsBalance === false) return 0;
-
   const isSource = row.accountId === accountId;
   const isDestination =
     row.transferAccountId === accountId || row.paymentTargetId === accountId;
   if (!isSource && !isDestination) return 0;
+
+  // An investment's holding leg always reflects the asset, even when the
+  // purchase doesn't draw from a tracked account (existing/external holdings).
+  if (row.type === "investment" && isDestination) return row.amount;
+
+  if (row.affectsBalance === false) return 0;
 
   switch (row.type) {
     case "income":

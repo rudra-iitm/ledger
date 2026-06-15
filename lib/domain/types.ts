@@ -387,6 +387,7 @@ export const recurringInvestmentSchema = z.object({
   startDate: isoDate,
   lastMaterializedDate: isoDate.optional(),
   notes: z.string().optional(),
+  affectsBalance: z.boolean().default(true),
   active: z.boolean().default(true),
   createdAt: z.string().min(1),
 });

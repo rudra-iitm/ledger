@@ -20,6 +20,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { AccountSelect } from "@/components/fields/account-select";
+import { AffectBalanceToggle } from "@/components/fields/affect-balance-toggle";
 import { DateField } from "@/components/fields/date-field";
 import {
   ASSET_TYPES,
@@ -84,6 +85,7 @@ export function RecurringInvestmentSheet({
   const [frequency, setFrequency] = useState<InvestmentFrequency>("daily");
   const [dayOfMonth, setDayOfMonth] = useState("1");
   const [startDate, setStartDate] = useState(todayISO());
+  const [affectsBalance, setAffectsBalance] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -99,6 +101,7 @@ export function RecurringInvestmentSheet({
       setFrequency(recurring.frequency);
       setDayOfMonth(String(recurring.dayOfMonth));
       setStartDate(recurring.startDate);
+      setAffectsBalance(recurring.affectsBalance ?? true);
     } else {
       setTarget(investmentAccounts[0]?.id ?? NEW_ASSET);
       setAssetType("gold");
@@ -109,6 +112,7 @@ export function RecurringInvestmentSheet({
       setFrequency("daily");
       setDayOfMonth("1");
       setStartDate(todayISO());
+      setAffectsBalance(true);
     }
     setError(null);
     setIsSubmitting(false);
@@ -144,7 +148,6 @@ export function RecurringInvestmentSheet({
           type: "investment",
           balance: 0,
           openingBalance: 0,
-          currency,
           icon: "📈",
           archived: false,
           debitCards: [],
@@ -165,6 +168,7 @@ export function RecurringInvestmentSheet({
         frequency,
         dayOfMonth: Number(dayOfMonth) || 1,
         startDate,
+        affectsBalance,
         active: true,
       };
       if (recurring) {
@@ -337,6 +341,13 @@ export function RecurringInvestmentSheet({
               onChange={(next) => next && setStartDate(next)}
             />
           </div>
+
+          <AffectBalanceToggle
+            checked={affectsBalance}
+            onChange={setAffectsBalance}
+            title="Deduct from funding account"
+            description="Turn off to accumulate gold bought outside the app"
+          />
 
           {error && (
             <p role="alert" className="-mt-1 text-sm text-destructive">

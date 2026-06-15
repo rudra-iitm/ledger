@@ -299,6 +299,8 @@ export function InvestmentSheet({
           <AffectBalanceToggle
             checked={affectsBalance}
             onChange={setAffectsBalance}
+            title="Deduct from funding account"
+            description="Turn off to log gold you already own or bought outside the app"
           />
 
           <div className="flex flex-col gap-2">

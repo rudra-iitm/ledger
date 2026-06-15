@@ -92,7 +92,7 @@ export function materializeInvestments(
         accountId: item.fromAccountId,
         transferAccountId: item.investmentAccountId,
         units: item.units,
-        affectsBalance: true,
+        affectsBalance: item.affectsBalance ?? true,
         notes: item.notes,
         tags: [],
         attachments: [],

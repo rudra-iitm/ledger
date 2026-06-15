@@ -47,10 +47,11 @@ const SheetContent = React.forwardRef<
       // This ensures the drawer sticks to the keyboard perfectly on iOS PWAs.
       const offsetBottom = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
       localRef.current.style.bottom = `${offsetBottom}px`;
-      
-      // Force max-height to the visual viewport minus the top safe area
-      // 47px is the standard iOS safe area top, we subtract it to prevent overlap
-      localRef.current.style.maxHeight = `calc(${vv.height}px - env(safe-area-inset-top, 47px) - 1rem)`;
+
+      // Cap to ~88% of the visible viewport so there's always a gap below the
+      // notch — the sheet never reaches the top of the screen. Inner content scrolls.
+      const cap = Math.round(vv.height * 0.88);
+      localRef.current.style.maxHeight = `${cap}px`;
     };
 
     window.visualViewport.addEventListener("resize", onResize);
@@ -70,7 +71,7 @@ const SheetContent = React.forwardRef<
         ref={localRef}
         data-slot="sheet-content"
         className={cn(
-          "fixed inset-x-0 z-50 mx-auto flex w-full max-w-lg flex-col rounded-t-4xl border-t border-border bg-popover shadow-sheet outline-none",
+          "fixed inset-x-0 z-50 mx-auto flex max-h-[88dvh] w-full max-w-lg flex-col rounded-t-4xl border-t border-border bg-popover shadow-sheet outline-none",
           className,
         )}
         style={{ bottom: 0 }}
