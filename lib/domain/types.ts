@@ -158,6 +158,17 @@ export const debitCardSchema = z.object({
 });
 export type DebitCard = z.infer<typeof debitCardSchema>;
 
+export const reconciliationSchema = z.object({
+  id: z.string().min(1),
+  date: isoDate,
+  actualBalance: z.number(),
+  appBalance: z.number(),
+  difference: z.number(),
+  adjusted: z.boolean().default(false),
+  createdAt: z.string().min(1),
+});
+export type Reconciliation = z.infer<typeof reconciliationSchema>;
+
 export const accountSchema = z.object({
   id: z.string().min(1),
   name: z.string().min(1),
@@ -176,6 +187,9 @@ export const accountSchema = z.object({
   assetType: assetTypeSchema.optional(),
   unitLabel: z.string().optional(),
   currentPrice: z.number().nonnegative().optional(),
+  reconciledBalance: z.number().optional(),
+  reconciledDate: isoDate.optional(),
+  reconciliations: z.array(reconciliationSchema).default([]),
   holderName: z.string().optional(),
   accountNumber: z.string().optional(),
   ifscCode: z.string().optional(),
@@ -235,6 +249,17 @@ export const expenseSchema = z.object({
   tags: z.array(z.string().min(1)).default([]),
   notes: z.string().optional(),
   attachments: z.array(attachmentSchema).default([]),
+  updatedAt: z.string().optional(),
+  history: z
+    .array(
+      z.object({
+        at: z.string().min(1),
+        field: z.string().min(1),
+        from: z.string(),
+        to: z.string(),
+      }),
+    )
+    .optional(),
 });
 export type Expense = z.infer<typeof expenseSchema>;
 
@@ -243,6 +268,12 @@ export const recurringExpenseSchema = z.object({
   description: z.string().min(1),
   amount: z.number().positive(),
   category: categorySchema,
+  kind: z
+    .enum(["expense", "income", "transfer", "cc_payment"])
+    .default("expense"),
+  transferAccountId: z.string().optional(),
+  incomeCategory: incomeCategorySchema.optional(),
+  source: z.string().optional(),
   frequency: recurrenceFrequencySchema.default("monthly"),
   dayOfMonth: z.number().int().min(1).max(31),
   weekday: z.number().int().min(0).max(6).optional(),
@@ -386,6 +417,7 @@ export const DEFAULT_ACCOUNTS: Account[] = [
     icon: "💵",
     archived: false,
     debitCards: [],
+    reconciliations: [],
     createdAt: "1970-01-01T00:00:00.000Z",
   },
   {
@@ -398,6 +430,7 @@ export const DEFAULT_ACCOUNTS: Account[] = [
     icon: "🏦",
     archived: false,
     debitCards: [],
+    reconciliations: [],
     createdAt: "1970-01-01T00:00:00.000Z",
   },
 ];

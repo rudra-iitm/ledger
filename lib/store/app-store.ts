@@ -22,6 +22,7 @@ import { materializeRecurring } from "../domain/recurring";
 import { materializeSubscriptions } from "../domain/subscriptions";
 import { materializeInvestments } from "../domain/recurring-investments";
 import { recomputeBalances } from "../domain/balances";
+import { roundMoney } from "../domain/money";
 import type {
   Account,
   Attachment,
@@ -94,7 +95,9 @@ interface AppState {
     expense: Omit<GroupExpense, "id" | "createdAt">,
   ) => void;
   deleteGroupExpense: (groupId: string, expenseId: string) => void;
-  addAccount: (account: Omit<Account, "id" | "createdAt">) => string;
+  addAccount: (
+    account: Omit<Account, "id" | "createdAt" | "reconciliations">,
+  ) => string;
   updateAccount: (id: string, patch: Partial<Omit<Account, "id">>) => void;
   deleteAccount: (id: string) => void;
   addSpace: (space: Omit<Space, "id" | "createdAt">) => string;
@@ -161,6 +164,12 @@ interface AppState {
   addGoal: (goal: Omit<Goal, "id" | "createdAt">) => string;
   updateGoal: (id: string, patch: Partial<Omit<Goal, "id">>) => void;
   deleteGoal: (id: string) => void;
+  reconcileAccount: (
+    accountId: string,
+    actualBalance: number,
+    date: string,
+    postAdjustment: boolean,
+  ) => void;
 }
 
 let repository: LedgerRepository | null = null;
@@ -405,12 +414,47 @@ export const useAppStore = create<AppState>((set, get) => {
       return id;
     },
 
-    updateExpense: (id, patch) =>
+    updateExpense: (id, patch) => {
+      const current = get().data.expenses.find((item) => item.id === id);
+      const now = new Date().toISOString();
+      const tracked: (keyof Expense)[] = [
+        "amount",
+        "category",
+        "date",
+        "description",
+        "accountId",
+        "type",
+        "incomeCategory",
+        "source",
+        "affectsBalance",
+        "notes",
+      ];
+      const changes = current
+        ? tracked
+            .filter((field) => field in patch)
+            .map((field) => ({
+              field,
+              from: String(current[field] ?? ""),
+              to: String((patch as Record<string, unknown>)[field] ?? ""),
+            }))
+            .filter((change) => change.from !== change.to)
+            .map((change) => ({ at: now, ...change }))
+        : [];
       mutateLedger(({ expenses }) => ({
         expenses: expenses.map((item) =>
-          item.id === id ? { ...item, ...patch } : item,
+          item.id === id
+            ? {
+                ...item,
+                ...patch,
+                updatedAt: changes.length ? now : item.updatedAt,
+                history: changes.length
+                  ? [...changes, ...(item.history ?? [])].slice(0, 30)
+                  : item.history,
+              }
+            : item,
         ),
-      })),
+      }));
+    },
 
     deleteExpense: (id) => {
       const target = get().data.expenses.find((item) => item.id === id);
@@ -579,7 +623,12 @@ export const useAppStore = create<AppState>((set, get) => {
       mutateLedger(({ accounts }) => ({
         accounts: [
           ...accounts,
-          { ...account, id, createdAt: new Date().toISOString() },
+          {
+            ...account,
+            reconciliations: [],
+            id,
+            createdAt: new Date().toISOString(),
+          },
         ],
       }));
       return id;
@@ -917,5 +966,52 @@ export const useAppStore = create<AppState>((set, get) => {
 
     deleteGoal: (id) =>
       mutate("goals", ({ goals }) => goals.filter((goal) => goal.id !== id)),
+
+    reconcileAccount: (accountId, actualBalance, date, postAdjustment) => {
+      const account = get().data.accounts.find((a) => a.id === accountId);
+      if (!account) return;
+      const appBalance = account.balance;
+      const difference = roundMoney(actualBalance - appBalance);
+      const willAdjust =
+        postAdjustment && difference !== 0 && account.type !== "credit_card";
+      const record = {
+        id: createId(),
+        date,
+        actualBalance,
+        appBalance,
+        difference,
+        adjusted: willAdjust,
+        createdAt: new Date().toISOString(),
+      };
+      mutateLedger(({ expenses, accounts }) => {
+        const nextAccounts = accounts.map((a) =>
+          a.id === accountId
+            ? {
+                ...a,
+                reconciledBalance: actualBalance,
+                reconciledDate: date,
+                reconciliations: [record, ...a.reconciliations],
+              }
+            : a,
+        );
+        if (!willAdjust) return { accounts: nextAccounts };
+        const isIncome = difference > 0;
+        const adjustment: Expense = {
+          id: createId(),
+          type: isIncome ? "income" : "expense",
+          description: "Reconciliation adjustment",
+          amount: Math.abs(difference),
+          category: "Other",
+          incomeCategory: isIncome ? "Other" : undefined,
+          date,
+          accountId,
+          affectsBalance: true,
+          tags: [],
+          attachments: [],
+          createdAt: new Date().toISOString(),
+        };
+        return { accounts: nextAccounts, expenses: [adjustment, ...expenses] };
+      });
+    },
   };
 });

@@ -40,8 +40,23 @@ import {
   todayISO,
 } from "@/lib/domain/dates";
 import { formatMoney } from "@/lib/domain/money";
+import {
+  upcomingEvents,
+  upcomingDateSet,
+  type UpcomingType,
+} from "@/lib/domain/upcoming";
 import { useAppStore } from "@/lib/store/app-store";
 import { cn } from "@/lib/utils";
+
+const EVENT_LABELS: Record<UpcomingType, string> = {
+  expense: "Bill",
+  income: "Income",
+  transfer: "Transfer",
+  cc_payment: "Card payment",
+  subscription: "Subscription",
+  investment: "Investment",
+  cc_due: "Card due",
+};
 
 type Mode = "month" | "week" | "day";
 const WEEKDAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -51,8 +66,24 @@ export function CalendarView() {
   const expenses = useAppStore((state) => state.data.expenses);
   const accounts = useAppStore((state) => state.data.accounts);
   const subscriptions = useAppStore((state) => state.data.subscriptions);
+  const recurring = useAppStore((state) => state.data.recurring);
+  const recurringInvestments = useAppStore(
+    (state) => state.data.recurringInvestments,
+  );
   const currency = useAppStore((state) => state.data.settings.currency);
   const sheets = useSheets();
+
+  const upcoming = useMemo(
+    () =>
+      upcomingEvents({
+        recurring,
+        subscriptions,
+        recurringInvestments,
+        accounts,
+      }),
+    [recurring, subscriptions, recurringInvestments, accounts],
+  );
+  const eventDates = useMemo(() => upcomingDateSet(upcoming), [upcoming]);
 
   const [mode, setMode] = useState<Mode>("month");
   const [month, setMonth] = useState(currentMonth());
@@ -69,14 +100,6 @@ export function CalendarView() {
       }),
     [expenses, category, accountId],
   );
-
-  const renewalDates = useMemo(() => {
-    const set = new Set<string>();
-    for (const subscription of subscriptions) {
-      if (subscription.active) set.add(subscription.nextRenewalDate);
-    }
-    return set;
-  }, [subscriptions]);
 
   const matrix = useMemo(
     () => monthMatrix(month, filtered),
@@ -121,7 +144,7 @@ export function CalendarView() {
           {formatMoney(total, currency)}
         </span>
       )}
-      {renewalDates.has(date) && (
+      {eventDates.has(date) && (
         <span
           aria-hidden
           className="absolute right-1 top-1 size-1.5 rounded-full bg-amber-400"
@@ -271,6 +294,43 @@ export function CalendarView() {
             onAdd={() => sheets.openExpense(undefined, { date: anchor })}
           />
         </div>
+      )}
+
+      {upcoming.length > 0 && (
+        <section aria-label="Upcoming" className="flex flex-col gap-2">
+          <h2 className="px-1 text-sm font-medium text-muted-foreground">
+            Upcoming
+          </h2>
+          <ul className="flex flex-col gap-2">
+            {upcoming.slice(0, 8).map((event) => (
+              <li
+                key={event.id}
+                className="flex items-center gap-3 rounded-2xl border border-border bg-card px-4 py-3 shadow-soft"
+              >
+                <span className="flex size-9 shrink-0 items-center justify-center rounded-xl border border-border bg-background text-[11px] font-medium tabular-nums">
+                  {Number(event.date.slice(8))}
+                </span>
+                <span className="flex min-w-0 flex-1 flex-col">
+                  <span className="truncate text-[15px] font-medium">
+                    {event.title}
+                  </span>
+                  <span className="text-[13px] text-muted-foreground">
+                    {EVENT_LABELS[event.type]} · {formatFullDate(event.date)}
+                  </span>
+                </span>
+                <span
+                  className={cn(
+                    "text-[15px] font-semibold tabular-nums",
+                    event.type === "income" && "text-emerald-500",
+                  )}
+                >
+                  {event.type === "income" ? "+" : ""}
+                  {formatMoney(event.amount, currency)}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
       )}
 
       <Sheet open={selected !== null} onOpenChange={(o) => !o && setSelected(null)}>

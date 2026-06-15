@@ -75,12 +75,10 @@ export function materializeRecurring(
     if (dueDates.length === 0) return item;
 
     for (const date of dueDates) {
-      newExpenses.push({
+      const base = {
         id: createId(),
         description: item.description,
         amount: item.amount,
-        type: "expense" as const,
-        category: item.category,
         date,
         createdAt: now.toISOString(),
         recurringId: item.id,
@@ -89,7 +87,37 @@ export function materializeRecurring(
         affectsBalance: true,
         tags: [],
         attachments: [],
-      });
+      };
+      const kind = item.kind ?? "expense";
+      if (kind === "income") {
+        newExpenses.push({
+          ...base,
+          type: "income" as const,
+          category: "Other",
+          incomeCategory: item.incomeCategory ?? "Other",
+          source: item.source,
+        });
+      } else if (kind === "transfer") {
+        newExpenses.push({
+          ...base,
+          type: "transfer" as const,
+          category: "Other",
+          transferAccountId: item.transferAccountId,
+        });
+      } else if (kind === "cc_payment") {
+        newExpenses.push({
+          ...base,
+          type: "cc_payment" as const,
+          category: "Bills",
+          paymentTargetId: item.transferAccountId,
+        });
+      } else {
+        newExpenses.push({
+          ...base,
+          type: "expense" as const,
+          category: item.category,
+        });
+      }
     }
     changed = true;
     return { ...item, lastMaterializedDate: dueDates[dueDates.length - 1] };

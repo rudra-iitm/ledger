@@ -27,6 +27,7 @@ import { CreditCardPaymentSheet } from "./cc-payment-sheet";
 import { InvestmentSheet } from "./investment-sheet";
 import { RecurringInvestmentSheet } from "./recurring-investment-sheet";
 import { GoalSheet } from "./goal-sheet";
+import { ReconcileSheet } from "./reconcile-sheet";
 
 type ActiveSheet =
   | { kind: "actions" }
@@ -43,6 +44,7 @@ type ActiveSheet =
   | { kind: "investment"; investmentAccountId?: string }
   | { kind: "recurring-investment"; recurring?: RecurringInvestment }
   | { kind: "goal"; goal?: Goal }
+  | { kind: "reconcile"; accountId: string }
   | null;
 
 interface SheetApi {
@@ -53,6 +55,7 @@ interface SheetApi {
   openInvestment: (investmentAccountId?: string) => void;
   openRecurringInvestment: (recurring?: RecurringInvestment) => void;
   openGoal: (goal?: Goal) => void;
+  openReconcile: (accountId: string) => void;
   openRecurring: (recurring?: RecurringExpense) => void;
   openGroup: (group?: Group) => void;
   openGroupExpense: (groupId: string) => void;
@@ -99,6 +102,8 @@ export function SheetProvider({ children }: { children: React.ReactNode }) {
       openRecurringInvestment: (recurring) =>
         setActive({ kind: "recurring-investment", recurring }),
       openGoal: (goal) => setActive({ kind: "goal", goal }),
+      openReconcile: (accountId) =>
+        setActive({ kind: "reconcile", accountId }),
       openRecurring: (recurring) => setActive({ kind: "recurring", recurring }),
       openGroup: (data) => setGroup({ open: true, data }),
       openGroupExpense: (groupId) => setActive({ kind: "group-expense", groupId }),
@@ -151,6 +156,11 @@ export function SheetProvider({ children }: { children: React.ReactNode }) {
       <GoalSheet
         open={active?.kind === "goal"}
         goal={active?.kind === "goal" ? active.goal : undefined}
+        onClose={closeSheet}
+      />
+      <ReconcileSheet
+        open={active?.kind === "reconcile"}
+        accountId={active?.kind === "reconcile" ? active.accountId : null}
         onClose={closeSheet}
       />
       <RecurringSheet

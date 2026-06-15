@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { ArrowLeft, CreditCard, Pencil, Wallet } from "lucide-react";
+import { ArrowLeft, CreditCard, Pencil, Scale, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/empty-state";
 import { ExpenseRow } from "@/components/expense-row";
@@ -245,10 +245,20 @@ export function AccountDetailView() {
           <ArrowLeft aria-hidden className="size-4" />
           Accounts
         </Link>
-        <Button variant="ghost" size="sm" onClick={() => sheets.openAccount(account)}>
-          <Pencil aria-hidden />
-          Edit
-        </Button>
+        <div className="flex items-center gap-1">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => sheets.openReconcile(account.id)}
+          >
+            <Scale aria-hidden />
+            Reconcile
+          </Button>
+          <Button variant="ghost" size="sm" onClick={() => sheets.openAccount(account)}>
+            <Pencil aria-hidden />
+            Edit
+          </Button>
+        </div>
       </div>
 
       <div className="mb-4">
@@ -291,6 +301,47 @@ export function AccountDetailView() {
         />
         <Stat label="Transactions" value={String(summary.totalTransactions)} />
       </div>
+
+      {account.reconciliations.length > 0 && (
+        <section aria-label="Reconciliation" className="flex flex-col gap-2">
+          <h3 className="text-sm font-medium text-muted-foreground">
+            Reconciliation
+          </h3>
+          <ul className="flex flex-col gap-1">
+            {account.reconciliations.slice(0, 4).map((entry) => (
+              <li
+                key={entry.id}
+                className="flex items-center justify-between rounded-2xl border border-border bg-card px-4 py-3 shadow-soft"
+              >
+                <span className="flex flex-col">
+                  <span className="text-[14px] font-medium">
+                    {formatDisplayDate(entry.date)}
+                  </span>
+                  <span className="text-[12px] text-muted-foreground">
+                    {entry.adjusted
+                      ? "Adjusted to match"
+                      : entry.difference === 0
+                        ? "Matched"
+                        : "Discrepancy noted"}
+                  </span>
+                </span>
+                <span
+                  className={`text-[14px] font-semibold tabular-nums ${
+                    entry.difference === 0
+                      ? "text-muted-foreground"
+                      : entry.difference > 0
+                        ? "text-emerald-500"
+                        : "text-destructive"
+                  }`}
+                >
+                  {entry.difference > 0 ? "+" : ""}
+                  {formatMoney(entry.difference, currency)}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       <section aria-label="Transactions">
         <h3 className="mb-2 text-sm font-medium text-muted-foreground">

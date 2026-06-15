@@ -30,7 +30,7 @@ import { DateField } from "@/components/fields/date-field";
 import { SpaceSelect } from "@/components/fields/space-select";
 import { TagInput } from "@/components/fields/tag-input";
 import { CATEGORIES, categorySchema, type Expense } from "@/lib/domain/types";
-import { todayISO } from "@/lib/domain/dates";
+import { todayISO, formatDisplayDate } from "@/lib/domain/dates";
 import { inferCategory } from "@/lib/domain/quick-add";
 import { useAppStore } from "@/lib/store/app-store";
 
@@ -383,6 +383,36 @@ export function ExpenseSheet({
               <TagIcon aria-hidden className="size-3.5" />
               Add space, tags, notes & attachments
             </button>
+          )}
+
+          {expense && liveExpense && (
+            <details className="rounded-2xl border border-border bg-card px-4 py-3 shadow-soft [&_summary]:list-none">
+              <summary className="flex cursor-pointer items-center justify-between text-[13px] text-muted-foreground">
+                <span>
+                  Added {formatDisplayDate(liveExpense.createdAt.slice(0, 10))}
+                  {liveExpense.updatedAt &&
+                    ` · edited ${formatDisplayDate(liveExpense.updatedAt.slice(0, 10))}`}
+                </span>
+                {liveExpense.history && liveExpense.history.length > 0 && (
+                  <span className="text-[12px]">History</span>
+                )}
+              </summary>
+              {liveExpense.history && liveExpense.history.length > 0 && (
+                <ul className="mt-3 flex flex-col gap-1.5 border-t border-border/60 pt-3">
+                  {liveExpense.history.slice(0, 8).map((entry, index) => (
+                    <li
+                      key={`${entry.at}-${index}`}
+                      className="text-[12px] text-muted-foreground"
+                    >
+                      <span className="capitalize text-foreground">
+                        {entry.field}
+                      </span>{" "}
+                      {entry.from || "∅"} → {entry.to || "∅"}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </details>
           )}
 
           <div className="flex flex-col gap-2 pt-1">

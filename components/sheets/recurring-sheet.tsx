@@ -19,13 +19,18 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AccountSelect } from "@/components/fields/account-select";
 import { DateField } from "@/components/fields/date-field";
 import {
   CATEGORIES,
+  INCOME_CATEGORIES,
   RECURRENCE_FREQUENCIES,
   categorySchema,
+  incomeCategorySchema,
   recurrenceFrequencySchema,
+  type Category,
+  type IncomeCategory,
   type RecurrenceFrequency,
   type RecurringExpense,
 } from "@/lib/domain/types";
@@ -41,6 +46,15 @@ const FREQUENCY_LABELS: Record<RecurrenceFrequency, string> = {
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
+type Kind = "expense" | "income" | "transfer" | "cc_payment";
+
+const KIND_LABELS: Record<Kind, string> = {
+  expense: "Expense",
+  income: "Income",
+  transfer: "Transfer",
+  cc_payment: "Card bill",
+};
+
 export function RecurringSheet({
   open,
   recurring,
@@ -53,40 +67,59 @@ export function RecurringSheet({
   const addRecurring = useAppStore((state) => state.addRecurring);
   const updateRecurring = useAppStore((state) => state.updateRecurring);
   const deleteRecurring = useAppStore((state) => state.deleteRecurring);
+  const accounts = useAppStore((state) => state.data.accounts);
 
+  const [kind, setKind] = useState<Kind>("expense");
   const [description, setDescription] = useState("");
   const [amount, setAmount] = useState("");
-  const [category, setCategory] = useState<RecurringExpense["category"]>("Bills");
+  const [category, setCategory] = useState<Category>("Bills");
+  const [incomeCategory, setIncomeCategory] = useState<IncomeCategory>("Salary");
+  const [source, setSource] = useState("");
   const [frequency, setFrequency] = useState<RecurrenceFrequency>("monthly");
   const [dayOfMonth, setDayOfMonth] = useState("1");
   const [weekday, setWeekday] = useState("1");
   const [startDate, setStartDate] = useState(todayISO());
   const [accountId, setAccountId] = useState<string | undefined>();
+  const [destinationAccountId, setDestinationAccountId] = useState<
+    string | undefined
+  >();
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open) return;
     if (recurring) {
+      setKind(recurring.kind ?? "expense");
       setDescription(recurring.description);
       setAmount(String(recurring.amount));
       setCategory(recurring.category);
+      setIncomeCategory(recurring.incomeCategory ?? "Salary");
+      setSource(recurring.source ?? "");
       setFrequency(recurring.frequency);
       setDayOfMonth(String(recurring.dayOfMonth));
       setWeekday(String(recurring.weekday ?? weekdayOf(recurring.startDate)));
       setStartDate(recurring.startDate);
       setAccountId(recurring.accountId);
+      setDestinationAccountId(recurring.transferAccountId);
     } else {
+      setKind("expense");
       setDescription("");
       setAmount("");
       setCategory("Bills");
+      setIncomeCategory("Salary");
+      setSource("");
       setFrequency("monthly");
       setDayOfMonth("1");
       setWeekday("1");
       setStartDate(todayISO());
       setAccountId(undefined);
+      setDestinationAccountId(undefined);
     }
     setError(null);
   }, [open, recurring]);
+
+  const cards = accounts.filter(
+    (account) => account.type === "credit_card" && !account.archived,
+  );
 
   const submit = () => {
     const parsedAmount = Number(amount);
@@ -98,11 +131,25 @@ export function RecurringSheet({
       setError("Enter an amount greater than zero");
       return;
     }
+    if (
+      (kind === "transfer" || kind === "cc_payment") &&
+      (!destinationAccountId || destinationAccountId === "none")
+    ) {
+      setError(kind === "transfer" ? "Pick a destination" : "Pick a card");
+      return;
+    }
 
     const payload = {
+      kind,
       description: description.trim(),
       amount: parsedAmount,
-      category,
+      category: kind === "expense" ? category : ("Bills" as Category),
+      incomeCategory: kind === "income" ? incomeCategory : undefined,
+      source: kind === "income" ? source.trim() || undefined : undefined,
+      transferAccountId:
+        kind === "transfer" || kind === "cc_payment"
+          ? destinationAccountId
+          : undefined,
       frequency,
       dayOfMonth: Math.min(31, Math.max(1, Number(dayOfMonth) || 1)),
       weekday: frequency === "weekly" ? Number(weekday) : undefined,
@@ -120,13 +167,16 @@ export function RecurringSheet({
     onClose();
   };
 
+  const accountLabel =
+    kind === "income" ? "Deposit to" : kind === "expense" ? "Paid via" : "From";
+
   return (
     <Sheet open={open} onOpenChange={(value) => !value && onClose()}>
       <SheetContent>
         <SheetHeader>
           <SheetTitle>{recurring ? "Edit recurring" : "Add recurring"}</SheetTitle>
           <SheetDescription>
-            Added to your expenses automatically when due.
+            Posted automatically when each occurrence is due.
           </SheetDescription>
         </SheetHeader>
         <form
@@ -136,11 +186,21 @@ export function RecurringSheet({
             submit();
           }}
         >
+          <Tabs value={kind} onValueChange={(value) => setKind(value as Kind)}>
+            <TabsList className="w-full">
+              {(Object.keys(KIND_LABELS) as Kind[]).map((item) => (
+                <TabsTrigger key={item} value={item} className="text-[13px]">
+                  {KIND_LABELS[item]}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </Tabs>
+
           <div className="flex flex-col gap-2">
             <Label htmlFor="recurring-description">Description</Label>
             <Input
               id="recurring-description"
-              placeholder="Rent"
+              placeholder={kind === "income" ? "Salary" : "Rent"}
               autoComplete="off"
               value={description}
               onChange={(event) => setDescription(event.target.value)}
@@ -184,24 +244,51 @@ export function RecurringSheet({
           </div>
 
           <div className="grid grid-cols-2 gap-3.5">
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="recurring-category">Category</Label>
-              <Select
-                value={category}
-                onValueChange={(value) => setCategory(categorySchema.parse(value))}
-              >
-                <SelectTrigger id="recurring-category">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {CATEGORIES.map((item) => (
-                    <SelectItem key={item} value={item}>
-                      {item}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            {kind === "expense" && (
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="recurring-category">Category</Label>
+                <Select
+                  value={category}
+                  onValueChange={(value) =>
+                    setCategory(categorySchema.parse(value))
+                  }
+                >
+                  <SelectTrigger id="recurring-category">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {CATEGORIES.map((item) => (
+                      <SelectItem key={item} value={item}>
+                        {item}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {kind === "income" && (
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="recurring-income-category">Category</Label>
+                <Select
+                  value={incomeCategory}
+                  onValueChange={(value) =>
+                    setIncomeCategory(incomeCategorySchema.parse(value))
+                  }
+                >
+                  <SelectTrigger id="recurring-income-category">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {INCOME_CATEGORIES.map((item) => (
+                      <SelectItem key={item} value={item}>
+                        {item}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
 
             {(frequency === "monthly" || frequency === "yearly") && (
               <div className="flex flex-col gap-2">
@@ -237,23 +324,68 @@ export function RecurringSheet({
             )}
           </div>
 
-          <div className="grid grid-cols-2 gap-3.5">
+          {kind === "income" && (
             <div className="flex flex-col gap-2">
-              <Label htmlFor="recurring-start">Starts</Label>
-              <DateField
-                id="recurring-start"
-                value={startDate}
-                onChange={(next) => next && setStartDate(next)}
+              <Label htmlFor="recurring-source">Source</Label>
+              <Input
+                id="recurring-source"
+                placeholder="Employer, client…"
+                value={source}
+                onChange={(event) => setSource(event.target.value)}
               />
             </div>
+          )}
+
+          <div className="grid grid-cols-2 gap-3.5">
             <div className="flex flex-col gap-2">
-              <Label htmlFor="recurring-account">Paid via</Label>
+              <Label htmlFor="recurring-account">{accountLabel}</Label>
               <AccountSelect
                 id="recurring-account"
                 value={accountId}
                 onChange={setAccountId}
+                allowNone={kind === "expense" || kind === "income"}
               />
             </div>
+            {kind === "transfer" && (
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="recurring-destination">To</Label>
+                <AccountSelect
+                  id="recurring-destination"
+                  value={destinationAccountId}
+                  onChange={setDestinationAccountId}
+                  allowNone={false}
+                />
+              </div>
+            )}
+            {kind === "cc_payment" && (
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="recurring-card">Card</Label>
+                <Select
+                  value={destinationAccountId}
+                  onValueChange={setDestinationAccountId}
+                >
+                  <SelectTrigger id="recurring-card">
+                    <SelectValue placeholder="Select card" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {cards.map((card) => (
+                      <SelectItem key={card.id} value={card.id}>
+                        {card.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="recurring-start">Starts</Label>
+            <DateField
+              id="recurring-start"
+              value={startDate}
+              onChange={(next) => next && setStartDate(next)}
+            />
           </div>
 
           {error && (
