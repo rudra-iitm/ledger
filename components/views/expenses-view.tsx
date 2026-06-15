@@ -161,11 +161,19 @@ export function ExpensesView() {
                       .filter((account) => !account.archived)
                       .map((account) => {
                         const institution = resolveInstitution(account.name);
+                        const isGold = account.assetType === "gold";
+                        const isSilver = account.assetType === "silver";
+                        const displayName = account.type === "investment" ? account.name : (institution ? institution.name : account.name);
                         return (
                           <SelectItem key={account.id} value={account.id}>
                             <div className="flex items-center gap-2">
-                              <InstitutionIcon institution={institution} type={account.type} size="xs" />
-                              <span>{institution ? institution.name : account.name}</span>
+                              <InstitutionIcon 
+                                institution={isGold || isSilver ? null : institution} 
+                                type={account.type} 
+                                assetType={account.assetType}
+                                size="xs" 
+                              />
+                              <span>{displayName}</span>
                             </div>
                           </SelectItem>
                         );

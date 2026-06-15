@@ -7,16 +7,17 @@ import { InstitutionLogoSvg } from "@/lib/institutions/icons";
 import { GenericAccountSvg } from "@/lib/institutions/generic-icons";
 import { cn } from "@/lib/utils";
 
-import type { AccountType } from "@/lib/domain/types";
+import type { AccountType, AssetType } from "@/lib/domain/types";
 
 interface InstitutionIconProps {
   institution?: Institution | null;
   type?: AccountType;
+  assetType?: AssetType;
   size?: "xs" | "sm" | "md" | "lg" | "xl";
   className?: string;
 }
 
-export function InstitutionIcon({ institution, type = "bank", size = "md", className }: InstitutionIconProps) {
+export function InstitutionIcon({ institution, type = "bank", assetType, size = "md", className }: InstitutionIconProps) {
   const [imageError, setImageError] = useState<"none" | "clearbit" | "google">("none");
 
   const sizeClasses = {
@@ -27,7 +28,7 @@ export function InstitutionIcon({ institution, type = "bank", size = "md", class
     xl: "size-16 rounded-[20px] text-3xl",
   };
 
-  if (!institution) {
+  if (!institution || assetType === "gold" || assetType === "silver") {
     return (
       <span
         aria-hidden
@@ -37,7 +38,7 @@ export function InstitutionIcon({ institution, type = "bank", size = "md", class
           className
         )}
       >
-        <GenericAccountSvg type={type} className="size-full" />
+        <GenericAccountSvg type={type} assetType={assetType} className="size-full" />
       </span>
     );
   }

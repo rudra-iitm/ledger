@@ -126,11 +126,19 @@ export function AnalyticsView() {
               .filter((account) => !account.archived)
               .map((account) => {
                 const institution = resolveInstitution(account.name);
+                const isGold = account.assetType === "gold";
+                const isSilver = account.assetType === "silver";
+                const displayName = account.type === "investment" ? account.name : (institution ? institution.name : account.name);
                 return (
                   <SelectItem key={account.id} value={account.id}>
                     <div className="flex items-center gap-2">
-                      <InstitutionIcon institution={institution} type={account.type} size="xs" />
-                      <span>{institution ? institution.name : account.name}</span>
+                      <InstitutionIcon 
+                        institution={isGold || isSilver ? null : institution} 
+                        type={account.type} 
+                        assetType={account.assetType}
+                        size="xs" 
+                      />
+                      <span>{displayName}</span>
                     </div>
                   </SelectItem>
                 );
@@ -243,14 +251,22 @@ export function AnalyticsView() {
               <ul className="flex flex-col gap-1">
                 {accountBreakdown.map(({ account, total: accountTotal }) => {
                   const institution = resolveInstitution(account.name);
+                  const isGold = account.assetType === "gold";
+                  const isSilver = account.assetType === "silver";
+                  const displayName = account.type === "investment" ? account.name : (institution ? institution.name : account.name);
                   return (
                     <li
                       key={account.id}
                       className="flex items-center justify-between px-2 py-2 text-[15px]"
                     >
                       <span className="flex items-center gap-2">
-                        <InstitutionIcon institution={institution} type={account.type} size="xs" />
-                        <span>{institution ? institution.name : account.name}</span>
+                        <InstitutionIcon 
+                          institution={isGold || isSilver ? null : institution} 
+                          type={account.type} 
+                          assetType={account.assetType}
+                          size="xs" 
+                        />
+                        <span>{displayName}</span>
                       </span>
                       <span className="font-semibold tabular-nums">
                         {formatMoney(accountTotal, settings.currency)}

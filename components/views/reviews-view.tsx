@@ -220,26 +220,43 @@ export function ReviewsView() {
                 Accounts
               </h2>
               {review.accountInsights.mostUsed && (() => {
-                const institution = resolveInstitution(review.accountInsights.mostUsed.name);
+                const mostUsed = review.accountInsights.mostUsed;
+                const institution = resolveInstitution(mostUsed.name);
+                const isGold = mostUsed.assetType === "gold";
+                const isSilver = mostUsed.assetType === "silver";
+                const displayName = mostUsed.type === "investment" ? mostUsed.name : (institution ? institution.name : mostUsed.name);
                 return (
                   <div className="mb-2 px-1 flex items-center gap-1.5 text-[13px] text-muted-foreground">
                     Most used: 
-                    <InstitutionIcon institution={institution} type={review.accountInsights.mostUsed.type} size="xs" />
-                    {institution ? institution.name : review.accountInsights.mostUsed.name}
+                    <InstitutionIcon 
+                      institution={isGold || isSilver ? null : institution} 
+                      type={mostUsed.type} 
+                      assetType={mostUsed.assetType}
+                      size="xs" 
+                    />
+                    {displayName}
                   </div>
                 );
               })()}
               <ul className="flex flex-col gap-1">
                 {review.accountInsights.balances.map((account) => {
                   const institution = resolveInstitution(account.name);
+                  const isGold = account.assetType === "gold";
+                  const isSilver = account.assetType === "silver";
+                  const displayName = account.type === "investment" ? account.name : (institution ? institution.name : account.name);
                   return (
                     <li
                       key={account.id}
                       className="flex items-center justify-between px-1 py-1.5 text-[15px]"
                     >
                       <span className="flex items-center gap-2">
-                        <InstitutionIcon institution={institution} type={account.type} size="xs" />
-                        <span>{institution ? institution.name : account.name}</span>
+                        <InstitutionIcon 
+                          institution={isGold || isSilver ? null : institution} 
+                          type={account.type} 
+                          assetType={account.assetType}
+                          size="xs" 
+                        />
+                        <span>{displayName}</span>
                       </span>
                       <span className="font-semibold tabular-nums">
                         {formatMoney(account.balance, currency)}

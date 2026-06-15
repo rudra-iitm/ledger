@@ -16,7 +16,14 @@ interface AccountCardProps {
 export function AccountCard({ account, currency, className }: AccountCardProps) {
   const institution = resolveInstitution(account.name);
 
-  const brandColor = institution?.accentColor || "#FFFFFF";
+  const isGold = account.assetType === "gold";
+  const isSilver = account.assetType === "silver";
+
+  let brandColor = institution?.accentColor || "#FFFFFF";
+  if (isGold) brandColor = "#F59E0B";
+  else if (isSilver) brandColor = "#94A3B8";
+
+  const displayName = account.type === "investment" ? account.name : (institution ? institution.name : account.name);
 
   return (
     <div
@@ -32,13 +39,14 @@ export function AccountCard({ account, currency, className }: AccountCardProps) 
       
       <div className="relative flex items-start justify-between">
         <InstitutionIcon 
-          institution={institution} 
+          institution={isGold || isSilver ? null : institution} 
           type={account.type} 
+          assetType={account.assetType}
           size="md" 
         />
         <div className="flex flex-col items-end">
           <span className="font-medium text-white/90 text-[15px]">
-            {institution ? institution.name : account.name}
+            {displayName}
           </span>
           <span className="text-[13px] text-white/50">
             {ACCOUNT_TYPE_LABELS[account.type]}

@@ -12,6 +12,8 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/empty-state";
 import { useSheets } from "@/components/sheets/sheet-context";
+import { resolveInstitution } from "@/lib/institutions/registry";
+import { InstitutionIcon } from "@/components/institution-icon";
 import { formatMoney } from "@/lib/domain/money";
 import { formatDisplayDate } from "@/lib/domain/dates";
 import {
@@ -149,12 +151,13 @@ export function InvestmentsView() {
                   onClick={() => sheets.openInvestment(holding.account.id)}
                   className="flex w-full items-center gap-3 rounded-2xl border border-border bg-card px-4 py-3.5 text-left shadow-soft outline-none transition-[background-color,transform] duration-200 ease-spring active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-ring"
                 >
-                  <span
-                    aria-hidden
-                    className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-border bg-background text-lg"
-                  >
-                    {holding.account.icon}
-                  </span>
+                  <InstitutionIcon
+                    institution={holding.account.assetType === "gold" || holding.account.assetType === "silver" ? null : resolveInstitution(holding.account.name)}
+                    type={holding.account.type}
+                    assetType={holding.account.assetType}
+                    size="md"
+                    className="shrink-0"
+                  />
                   <span className="flex min-w-0 flex-1 flex-col">
                     <span className="truncate text-[15px] font-medium">
                       {holding.account.name}
@@ -212,9 +215,12 @@ export function InvestmentsView() {
                   onClick={() => sheets.openRecurringInvestment(schedule)}
                   className="flex w-full items-center gap-3 rounded-2xl border border-border bg-card px-4 py-3.5 text-left shadow-soft outline-none transition-[background-color,transform] duration-200 ease-spring active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-ring"
                 >
-                  <CalendarClock
-                    aria-hidden
-                    className="size-5 shrink-0 text-muted-foreground"
+                  <InstitutionIcon
+                    institution={schedule.assetType === "gold" || schedule.assetType === "silver" ? null : resolveInstitution(schedule.name)}
+                    type="investment"
+                    assetType={schedule.assetType}
+                    size="xs"
+                    className="shrink-0"
                   />
                   <span className="flex min-w-0 flex-1 flex-col">
                     <span className="truncate text-[15px] font-medium">

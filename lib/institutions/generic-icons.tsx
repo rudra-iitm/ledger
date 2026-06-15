@@ -1,7 +1,25 @@
 import { type SVGProps } from "react";
-import type { AccountType } from "@/lib/domain/types";
+import type { AccountType, AssetType } from "@/lib/domain/types";
 
-export function GenericAccountSvg({ type, ...props }: { type: AccountType } & SVGProps<SVGSVGElement>) {
+export function GenericAccountSvg({ type, assetType, ...props }: { type: AccountType, assetType?: AssetType } & SVGProps<SVGSVGElement>) {
+  if (assetType === "gold") {
+    return (
+      <svg viewBox="0 0 100 100" fill="none" {...props}>
+        <rect width="100" height="100" fill="#422006" />
+        <circle cx="50" cy="50" r="30" fill="#FBBF24" />
+        <circle cx="50" cy="50" r="22" fill="#F59E0B" />
+      </svg>
+    );
+  }
+  if (assetType === "silver") {
+    return (
+      <svg viewBox="0 0 100 100" fill="none" {...props}>
+        <rect width="100" height="100" fill="#0f172a" />
+        <circle cx="50" cy="50" r="30" fill="#E2E8F0" />
+        <circle cx="50" cy="50" r="22" fill="#CBD5E1" />
+      </svg>
+    );
+  }
   switch (type) {
     case "cash":
       return (
