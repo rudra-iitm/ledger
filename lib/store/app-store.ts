@@ -482,9 +482,25 @@ export const useAppStore = create<AppState>((set, get) => {
           void store.remove(attachment.id, attachment.mimeType);
         }
       }
-      mutateLedger(({ expenses }) => ({
-        expenses: expenses.filter((item) => item.id !== id),
-      }));
+      mutateLedger(({ expenses, accounts }) => {
+        const newExpenses = expenses.filter((item) => item.id !== id);
+        let newAccounts = accounts;
+        
+        if (target && target.type === "investment" && target.transferAccountId) {
+          const invAccountId = target.transferAccountId;
+          const hasOtherTransactions = newExpenses.some(
+            (e) => e.accountId === invAccountId || e.transferAccountId === invAccountId
+          );
+          if (!hasOtherTransactions) {
+            newAccounts = accounts.filter((a) => a.id !== invAccountId);
+          }
+        }
+        
+        return {
+          expenses: newExpenses,
+          ...(newAccounts !== accounts ? { accounts: newAccounts } : {})
+        };
+      });
     },
 
     addAttachment: async (expenseId, file) => {

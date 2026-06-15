@@ -66,6 +66,7 @@ export function buildPortfolio(
 ): Portfolio {
   const holdings = investmentAccounts(accounts)
     .map((account) => holdingFor(account, rows))
+    .filter((holding) => holding.invested > 0 || holding.units > 0 || holding.currentValue > 0)
     .sort((a, b) => b.currentValue - a.currentValue);
   const invested = roundMoney(
     holdings.reduce((total, holding) => total + holding.invested, 0),

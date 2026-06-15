@@ -29,6 +29,7 @@ import {
   ASSET_UNIT_LABELS,
   assetTypeSchema,
   type AssetType,
+  type Expense,
 } from "@/lib/domain/types";
 import { assetNeedsPriceId, priceIdHint } from "@/lib/domain/prices";
 import { todayISO } from "@/lib/domain/dates";
@@ -39,15 +40,18 @@ const NEW_ASSET = "__new__";
 export function InvestmentSheet({
   open,
   defaultInvestmentAccountId,
+  expense,
   onClose,
 }: {
   open: boolean;
   defaultInvestmentAccountId?: string;
+  expense?: Expense;
   onClose: () => void;
 }) {
   const accounts = useAppStore((state) => state.data.accounts);
   const addAccount = useAppStore((state) => state.addAccount);
   const addInvestment = useAppStore((state) => state.addInvestment);
+  const updateExpense = useAppStore((state) => state.updateExpense);
   const currency = useAppStore((state) => state.data.settings.currency);
 
   const investmentAccounts = useMemo(
@@ -73,6 +77,18 @@ export function InvestmentSheet({
 
   useEffect(() => {
     if (!open) return;
+    if (expense) {
+      setTarget(expense.transferAccountId ?? NEW_ASSET);
+      setAmount(String(expense.amount));
+      setUnits(expense.units !== undefined && expense.units !== null ? String(expense.units) : "");
+      setFromAccountId(expense.accountId);
+      setDate(expense.date);
+      setNotes(expense.notes || "");
+      setAffectsBalance(expense.affectsBalance ?? true);
+      setError(null);
+      setIsSubmitting(false);
+      return;
+    }
     const initial =
       defaultInvestmentAccountId ?? investmentAccounts[0]?.id ?? NEW_ASSET;
     setTarget(initial);
@@ -88,7 +104,7 @@ export function InvestmentSheet({
     setError(null);
     setIsSubmitting(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, defaultInvestmentAccountId]);
+  }, [open, defaultInvestmentAccountId, expense]);
 
   const isNew = target === NEW_ASSET;
   const unitLabel = isNew
@@ -118,6 +134,20 @@ export function InvestmentSheet({
 
     setIsSubmitting(true);
     try {
+      if (expense) {
+        updateExpense(expense.id, {
+          amount: parsedAmount,
+          units: parsedUnits,
+          date,
+          accountId: fromAccountId,
+          notes,
+          affectsBalance,
+        });
+        toast.success("Investment updated");
+        onClose();
+        return;
+      }
+      
       let investmentAccountId = target;
       let name: string;
       if (isNew) {
@@ -154,7 +184,7 @@ export function InvestmentSheet({
       toast.success("Investment recorded");
       onClose();
     } catch {
-      toast.error("Failed to record investment");
+      toast.error(expense ? "Failed to update investment" : "Failed to record investment");
     } finally {
       setIsSubmitting(false);
     }
@@ -166,7 +196,7 @@ export function InvestmentSheet({
         <SheetHeader>
           <SheetTitle className="flex items-center gap-2">
             <TrendingUp className="size-5" />
-            Add investment
+            {expense ? "Edit investment" : "Add investment"}
           </SheetTitle>
         </SheetHeader>
 
@@ -197,7 +227,7 @@ export function InvestmentSheet({
 
           <div className="flex flex-col gap-2">
             <Label htmlFor="investment-asset">Asset</Label>
-            <Select value={target} onValueChange={setTarget}>
+            <Select value={target} onValueChange={setTarget} disabled={!!expense}>
               <SelectTrigger id="investment-asset">
                 <SelectValue />
               </SelectTrigger>
@@ -321,7 +351,7 @@ export function InvestmentSheet({
 
           <div className="flex flex-col gap-2 pt-1">
             <Button type="submit" size="lg" disabled={isSubmitting}>
-              {isSubmitting ? "Saving..." : "Add investment"}
+              {isSubmitting ? "Saving..." : (expense ? "Save changes" : "Add investment")}
             </Button>
           </div>
         </form>

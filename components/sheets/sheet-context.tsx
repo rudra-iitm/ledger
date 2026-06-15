@@ -41,7 +41,7 @@ type ActiveSheet =
   | { kind: "account"; account?: Account }
   | { kind: "subscription"; subscription?: Subscription }
   | { kind: "cc-payment"; cardId: string }
-  | { kind: "investment"; investmentAccountId?: string }
+  | { kind: "investment"; investmentAccountId?: string; expense?: Expense }
   | { kind: "recurring-investment"; recurring?: RecurringInvestment }
   | { kind: "goal"; goal?: Goal }
   | { kind: "reconcile"; accountId: string }
@@ -52,7 +52,7 @@ interface SheetApi {
   openExpense: (expense?: Expense, defaults?: Partial<Expense>) => void;
   openIncome: (income?: Expense) => void;
   openCreditCardPayment: (cardId: string) => void;
-  openInvestment: (investmentAccountId?: string) => void;
+  openInvestment: (investmentAccountId?: string, expense?: Expense) => void;
   openRecurringInvestment: (recurring?: RecurringInvestment) => void;
   openGoal: (goal?: Goal) => void;
   openReconcile: (accountId: string) => void;
@@ -97,8 +97,8 @@ export function SheetProvider({ children }: { children: React.ReactNode }) {
       openIncome: (income) => setActive({ kind: "income", income }),
       openCreditCardPayment: (cardId) =>
         setActive({ kind: "cc-payment", cardId }),
-      openInvestment: (investmentAccountId) =>
-        setActive({ kind: "investment", investmentAccountId }),
+      openInvestment: (investmentAccountId, expense) =>
+        setActive({ kind: "investment", investmentAccountId, expense }),
       openRecurringInvestment: (recurring) =>
         setActive({ kind: "recurring-investment", recurring }),
       openGoal: (goal) => setActive({ kind: "goal", goal }),
@@ -144,6 +144,7 @@ export function SheetProvider({ children }: { children: React.ReactNode }) {
         defaultInvestmentAccountId={
           active?.kind === "investment" ? active.investmentAccountId : undefined
         }
+        expense={active?.kind === "investment" ? active.expense : undefined}
         onClose={closeSheet}
       />
       <RecurringInvestmentSheet

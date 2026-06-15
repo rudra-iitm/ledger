@@ -115,6 +115,7 @@ export function ExpenseRow({ expense }: { expense: Expense }) {
       return;
     }
     if (expense.type === "income") sheets.openIncome(expense);
+    else if (expense.type === "investment") sheets.openInvestment(undefined, expense);
     else if (!expense.type || expense.type === "expense")
       sheets.openExpense(expense);
   };
@@ -122,6 +123,7 @@ export function ExpenseRow({ expense }: { expense: Expense }) {
   const onEdit = () => {
     close();
     if (expense.type === "income") sheets.openIncome(expense);
+    else if (expense.type === "investment") sheets.openInvestment(undefined, expense);
     else if (!expense.type || expense.type === "expense")
       sheets.openExpense(expense);
   };
