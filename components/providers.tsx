@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { Toaster } from "sonner";
+import { PwaManager } from "@/components/pwa-manager";
 import { useAppStore } from "@/lib/store/app-store";
 
 export function AppProviders({ children }: { children: React.ReactNode }) {
@@ -14,6 +15,7 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
   return (
     <>
       {children}
+      <PwaManager />
       <Toaster
         theme="dark"
         position="top-center"

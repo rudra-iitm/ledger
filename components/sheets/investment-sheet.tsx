@@ -30,6 +30,7 @@ import {
   assetTypeSchema,
   type AssetType,
 } from "@/lib/domain/types";
+import { assetNeedsPriceId, priceIdHint } from "@/lib/domain/prices";
 import { todayISO } from "@/lib/domain/dates";
 import { useAppStore } from "@/lib/store/app-store";
 
@@ -60,6 +61,7 @@ export function InvestmentSheet({
   const [target, setTarget] = useState<string>(NEW_ASSET);
   const [assetType, setAssetType] = useState<AssetType>("gold");
   const [assetName, setAssetName] = useState("");
+  const [priceId, setPriceId] = useState("");
   const [amount, setAmount] = useState("");
   const [units, setUnits] = useState("");
   const [fromAccountId, setFromAccountId] = useState<string | undefined>();
@@ -76,6 +78,7 @@ export function InvestmentSheet({
     setTarget(initial);
     setAssetType("gold");
     setAssetName("");
+    setPriceId("");
     setAmount("");
     setUnits("");
     setFromAccountId(undefined);
@@ -124,12 +127,15 @@ export function InvestmentSheet({
           type: "investment",
           balance: 0,
           openingBalance: 0,
-          currency,
           icon: "📈",
           archived: false,
           debitCards: [],
           assetType,
           unitLabel: ASSET_UNIT_LABELS[assetType],
+          priceId:
+            assetNeedsPriceId(assetType) && priceId.trim()
+              ? priceId.trim()
+              : undefined,
         });
       } else {
         name =
@@ -237,6 +243,23 @@ export function InvestmentSheet({
                   onChange={(event) => setAssetName(event.target.value)}
                 />
               </div>
+              {assetNeedsPriceId(assetType) && (
+                <div className="col-span-2 flex flex-col gap-2">
+                  <Label htmlFor="investment-price-id">
+                    Price reference{" "}
+                    <span className="font-normal text-muted-foreground">
+                      (optional · for live value)
+                    </span>
+                  </Label>
+                  <Input
+                    id="investment-price-id"
+                    placeholder={priceIdHint(assetType)}
+                    autoComplete="off"
+                    value={priceId}
+                    onChange={(event) => setPriceId(event.target.value)}
+                  />
+                </div>
+              )}
             </div>
           )}
 

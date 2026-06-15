@@ -5,6 +5,13 @@ export function downloadCsv(filename: string, content: string): void {
   triggerDownload(filename, URL.createObjectURL(blob));
 }
 
+export function downloadJson(filename: string, content: string): void {
+  const blob = new Blob([content], { type: "application/json;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  triggerDownload(filename, url);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
 export async function downloadReportPdf(
   filename: string,
   report: ReportData,

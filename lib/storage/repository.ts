@@ -57,7 +57,7 @@ export const EMPTY_DATA: LedgerData = {
   goals: [],
 };
 
-const FILE_SCHEMAS = {
+export const FILE_SCHEMAS = {
   expenses: expensesFileSchema,
   recurring: recurringFileSchema,
   groups: groupsFileSchema,

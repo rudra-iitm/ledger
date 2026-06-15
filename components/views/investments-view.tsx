@@ -1,7 +1,14 @@
 "use client";
 
-import { useMemo } from "react";
-import { CalendarClock, LineChart, Plus, Target } from "lucide-react";
+import { useMemo, useState } from "react";
+import {
+  CalendarClock,
+  LineChart,
+  Plus,
+  RefreshCw,
+  Target,
+} from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/empty-state";
 import { useSheets } from "@/components/sheets/sheet-context";
@@ -22,7 +29,34 @@ export function InvestmentsView() {
   const schedules = useAppStore((state) => state.data.recurringInvestments);
   const goals = useAppStore((state) => state.data.goals);
   const currency = useAppStore((state) => state.data.settings.currency);
+  const refreshPrices = useAppStore((state) => state.refreshPrices);
   const sheets = useSheets();
+  const [refreshing, setRefreshing] = useState(false);
+
+  const canRefresh = useMemo(
+    () =>
+      accounts.some(
+        (account) =>
+          account.type === "investment" &&
+          !account.archived &&
+          (account.assetType === "gold" ||
+            account.assetType === "silver" ||
+            Boolean(account.priceId)),
+      ),
+    [accounts],
+  );
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await refreshPrices();
+      toast.success("Prices updated");
+    } catch {
+      toast.error("Couldn't fetch prices");
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   const portfolio = useMemo(
     () => buildPortfolio(accounts, expenses),
@@ -83,9 +117,23 @@ export function InvestmentsView() {
       </section>
 
       <section aria-label="Holdings">
-        <h2 className="mb-2 px-1 text-sm font-medium text-muted-foreground">
-          Holdings
-        </h2>
+        <div className="mb-2 flex items-center justify-between px-1">
+          <h2 className="text-sm font-medium text-muted-foreground">Holdings</h2>
+          {canRefresh && (
+            <button
+              type="button"
+              onClick={handleRefresh}
+              disabled={refreshing}
+              className="inline-flex items-center gap-1.5 rounded-lg text-[13px] text-muted-foreground outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60"
+            >
+              <RefreshCw
+                aria-hidden
+                className={cn("size-3.5", refreshing && "animate-spin")}
+              />
+              {refreshing ? "Updating…" : "Refresh prices"}
+            </button>
+          )}
+        </div>
         {portfolio.holdings.length === 0 ? (
           <EmptyState
             icon={LineChart}

@@ -3,7 +3,8 @@
 import { create } from "zustand";
 import type { AuthSession } from "../auth/types";
 import { clearSession, loadSession, saveSession } from "../auth/session";
-import type { DataFile } from "../storage/adapter";
+import { DATA_FILES, type DataFile } from "../storage/adapter";
+import { buildBackup, parseBackup } from "../export/backup";
 import { GitHubStorageAdapter } from "../storage/github";
 import { LocalStorageAdapter } from "../storage/local";
 import {
@@ -22,6 +23,7 @@ import { materializeRecurring } from "../domain/recurring";
 import { materializeSubscriptions } from "../domain/subscriptions";
 import { materializeInvestments } from "../domain/recurring-investments";
 import { recomputeBalances } from "../domain/balances";
+import { buildPriceParams, priceUpdates } from "../domain/prices";
 import { roundMoney } from "../domain/money";
 import type {
   Account,
@@ -170,6 +172,21 @@ interface AppState {
     date: string,
     postAdjustment: boolean,
   ) => void;
+  exportBackup: () => string;
+  importBackup: (json: string) => Promise<void>;
+  refreshPrices: () => Promise<void>;
+}
+
+function pricesEndpoint(): string | null {
+  const explicit = process.env.NEXT_PUBLIC_PRICES_URL;
+  if (explicit) return explicit;
+  const exchange = process.env.NEXT_PUBLIC_GITHUB_TOKEN_EXCHANGE_URL;
+  if (!exchange) return null;
+  try {
+    return new URL("/prices", exchange).toString();
+  } catch {
+    return null;
+  }
 }
 
 let repository: LedgerRepository | null = null;
@@ -333,6 +350,7 @@ export const useAppStore = create<AppState>((set, get) => {
       persist("recurringInvestments", data, set);
     }
     if (accountsChanged) persist("accounts", data, set);
+    void get().refreshPrices();
   };
 
   return {
@@ -1012,6 +1030,44 @@ export const useAppStore = create<AppState>((set, get) => {
         };
         return { accounts: nextAccounts, expenses: [adjustment, ...expenses] };
       });
+    },
+
+    refreshPrices: async () => {
+      const endpoint = pricesEndpoint();
+      if (!endpoint) return;
+      const params = buildPriceParams(get().data.accounts);
+      if (!params) return;
+      try {
+        const response = await fetch(`${endpoint}?${params.toString()}`);
+        if (!response.ok) return;
+        const body = (await response.json()) as {
+          prices?: Record<string, number>;
+        };
+        const updates = priceUpdates(get().data.accounts, body.prices ?? {});
+        if (updates.length === 0) return;
+        const at = new Date().toISOString();
+        const byId = new Map(updates.map((update) => [update.id, update]));
+        mutateLedger(({ accounts }) => ({
+          accounts: accounts.map((account) => {
+            const update = byId.get(account.id);
+            return update
+              ? { ...account, currentPrice: update.currentPrice, priceUpdatedAt: at }
+              : account;
+          }),
+        }));
+      } catch {
+        /* prices are best-effort */
+      }
+    },
+
+    exportBackup: () => buildBackup(get().data),
+
+    importBackup: async (json) => {
+      const parsed = parseBackup(json);
+      const accounts = recomputeBalances(parsed.accounts, parsed.expenses);
+      const data: LedgerData = { ...parsed, accounts };
+      set({ data });
+      for (const file of DATA_FILES) persist(file, data, set);
     },
   };
 });

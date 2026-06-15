@@ -27,6 +27,7 @@ import {
   type BankAccountType,
 } from "@/lib/domain/types";
 import { DateField } from "@/components/fields/date-field";
+import { assetNeedsPriceId, priceIdHint } from "@/lib/domain/prices";
 import { todayISO } from "@/lib/domain/dates";
 import { useAppStore } from "@/lib/store/app-store";
 
@@ -70,6 +71,7 @@ export function AccountSheet({
   const [minimumBalance, setMinimumBalance] = useState("");
   const [creditLimit, setCreditLimit] = useState("");
   const [statementBalance, setStatementBalance] = useState("");
+  const [priceId, setPriceId] = useState("");
 
   const [error, setError] = useState<string | null>(null);
 
@@ -90,6 +92,7 @@ export function AccountSheet({
       setMinimumBalance(account.minimumBalance !== undefined ? String(account.minimumBalance) : "");
       setCreditLimit(account.creditLimit !== undefined ? String(account.creditLimit) : "");
       setStatementBalance(account.statementBalance !== undefined ? String(account.statementBalance) : "");
+      setPriceId(account.priceId ?? "");
     } else {
       setName("");
       setType("bank");
@@ -105,6 +108,7 @@ export function AccountSheet({
       setMinimumBalance("");
       setCreditLimit("");
       setStatementBalance("");
+      setPriceId("");
     }
     setError(null);
   }, [open, account]);
@@ -122,7 +126,6 @@ export function AccountSheet({
       openingBalance,
       openingDate,
       icon: account ? account.icon : "🏦", // Keep legacy field populated for database compat
-      currency,
       debitCards: account ? account.debitCards : [],
       holderName: type === "bank" && holderName.trim() ? holderName.trim() : undefined,
       accountNumber: type === "bank" && accountNumber.trim() ? accountNumber.trim() : undefined,
@@ -134,6 +137,9 @@ export function AccountSheet({
       statementBalance: type === "credit_card" && statementBalance ? Number(statementBalance) : undefined,
       minimumDue: type === "credit_card" && minimumDue ? Number(minimumDue) : undefined,
       statementDueDate: type === "credit_card" && statementDueDate ? statementDueDate : undefined,
+      ...(type === "investment"
+        ? { priceId: priceId.trim() || undefined }
+        : {}),
     };
     if (account) {
       updateAccount(account.id, payload);
@@ -279,6 +285,26 @@ export function AccountSheet({
               </div>
             </div>
           )}
+
+          {type === "investment" &&
+            account?.assetType &&
+            assetNeedsPriceId(account.assetType) && (
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="account-price-id">
+                  Price reference{" "}
+                  <span className="font-normal text-muted-foreground">
+                    (for live value)
+                  </span>
+                </Label>
+                <Input
+                  id="account-price-id"
+                  placeholder={priceIdHint(account.assetType)}
+                  autoComplete="off"
+                  value={priceId}
+                  onChange={(event) => setPriceId(event.target.value)}
+                />
+              </div>
+            )}
 
           {error && (
             <p role="alert" className="text-sm text-destructive">

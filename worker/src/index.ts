@@ -1,4 +1,12 @@
-interface Env {
+import { computePrices, parsePriceQuery } from "./prices";
+import {
+  handleSubscribe,
+  handleUnsubscribe,
+  runScheduled,
+  type PushEnv,
+} from "./push";
+
+interface Env extends PushEnv {
   GITHUB_CLIENT_ID: string;
   GITHUB_CLIENT_SECRET: string;
   ALLOWED_ORIGINS?: string;
@@ -20,7 +28,7 @@ function corsHeaders(origin: string | null, env: Env): Record<string, string> {
       : allowed[0] ?? "*";
   return {
     "Access-Control-Allow-Origin": allowOrigin,
-    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type",
     "Access-Control-Max-Age": "86400",
     Vary: "Origin",
@@ -38,8 +46,41 @@ function json(
   });
 }
 
+async function handlePrices(
+  url: URL,
+  ctx: ExecutionContext,
+  cors: Record<string, string>,
+): Promise<Response> {
+  const cache = caches.default;
+  const cacheKey = new Request(
+    `https://prices.cache${url.pathname}${url.search}`,
+  );
+  const cached = await cache.match(cacheKey);
+  if (cached) {
+    return json(await cached.json(), 200, cors);
+  }
+  const prices = await computePrices(parsePriceQuery(url));
+  const body = { prices, asOf: new Date().toISOString() };
+  ctx.waitUntil(
+    cache.put(
+      cacheKey,
+      new Response(JSON.stringify(body), {
+        headers: {
+          "Content-Type": "application/json",
+          "Cache-Control": "max-age=600",
+        },
+      }),
+    ),
+  );
+  return json(body, 200, cors);
+}
+
 export default {
-  async fetch(request: Request, env: Env): Promise<Response> {
+  async fetch(
+    request: Request,
+    env: Env,
+    ctx: ExecutionContext,
+  ): Promise<Response> {
     const origin = request.headers.get("Origin");
     const cors = corsHeaders(origin, env);
 
@@ -50,6 +91,20 @@ export default {
     const url = new URL(request.url);
     if (request.method === "GET" && url.pathname === "/health") {
       return json({ ok: true }, 200, cors);
+    }
+
+    if (request.method === "GET" && url.pathname === "/prices") {
+      return handlePrices(url, ctx, cors);
+    }
+
+    if (request.method === "POST" && url.pathname === "/push/subscribe") {
+      const status = await handleSubscribe(request, env);
+      return json(status === 200 ? { ok: true } : { error: "Subscribe failed" }, status, cors);
+    }
+
+    if (request.method === "POST" && url.pathname === "/push/unsubscribe") {
+      const status = await handleUnsubscribe(request, env);
+      return json(status === 200 ? { ok: true } : { error: "Unsubscribe failed" }, status, cors);
     }
 
     if (request.method !== "POST") {
@@ -107,5 +162,13 @@ export default {
     }
 
     return json({ access_token: data.access_token }, 200, cors);
+  },
+
+  async scheduled(
+    _event: ScheduledEvent,
+    env: Env,
+    ctx: ExecutionContext,
+  ): Promise<void> {
+    ctx.waitUntil(runScheduled(env));
   },
 };

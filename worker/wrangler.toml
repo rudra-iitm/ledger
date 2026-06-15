@@ -7,6 +7,21 @@ compatibility_date = "2024-11-01"
 [vars]
 ALLOWED_ORIGINS = "*"
 
+# Daily check for due bills/cards — sends a push to subscribers (09:00 UTC).
+[triggers]
+crons = ["0 9 * * *"]
+
+# KV namespace storing push subscriptions + their due dates.
+# Create it once, then paste the id below:
+#   npx wrangler kv namespace create PUSH
+[[kv_namespaces]]
+binding = "PUSH"
+id = "REPLACE_WITH_KV_NAMESPACE_ID"
+
 # Secrets (do NOT put these here). Set them with:
 #   npx wrangler secret put GITHUB_CLIENT_ID
 #   npx wrangler secret put GITHUB_CLIENT_SECRET
+# Web Push (VAPID) — generate a keypair with: npx web-push generate-vapid-keys
+#   npx wrangler secret put VAPID_PUBLIC_KEY      # base64url, also set NEXT_PUBLIC_VAPID_PUBLIC_KEY on the site
+#   npx wrangler secret put VAPID_PRIVATE_KEY     # base64url
+#   npx wrangler secret put VAPID_SUBJECT         # e.g. mailto:you@example.com

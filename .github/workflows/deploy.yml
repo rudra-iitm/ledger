@@ -35,6 +35,9 @@ jobs:
           NEXT_PUBLIC_BASE_PATH: /ledger
           NEXT_PUBLIC_GITHUB_CLIENT_ID: Ov23li5GM8ybWUPQlgFn
           NEXT_PUBLIC_GITHUB_TOKEN_EXCHANGE_URL: 'https://ledger-auth.singhrudra5556.workers.dev'
+          # Optional — enables bill reminders. Set repo variable VAPID_PUBLIC_KEY
+          # to the worker's VAPID public key (Settings → Secrets and variables → Actions → Variables).
+          NEXT_PUBLIC_VAPID_PUBLIC_KEY: ${{ vars.VAPID_PUBLIC_KEY }}
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
