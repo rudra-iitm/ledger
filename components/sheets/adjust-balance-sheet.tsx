@@ -35,22 +35,27 @@ export function AdjustBalanceSheet({
 
   const [value, setValue] = useState("");
   const [date, setDate] = useState(todayISO());
+  const [hardReset, setHardReset] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open) return;
     setValue("");
     setDate(todayISO());
+    setHardReset(false);
     setError(null);
   }, [open]);
 
   if (!account) return null;
 
   const isCard = account.type === "credit_card";
+  const supportsAdjustment = !isCard && account.type !== "investment";
   const currentBalance = account.balance;
   const parsed = Number(value);
   const hasValue = value !== "" && Number.isFinite(parsed);
   const difference = hasValue ? roundMoney(parsed - currentBalance) : 0;
+  // Card/investment accounts always overwrite via opening balance.
+  const overwrites = hardReset || !supportsAdjustment;
 
   const submit = () => {
     if (!hasValue) {
@@ -62,8 +67,8 @@ export function AdjustBalanceSheet({
       onClose();
       return;
     }
-    adjustBalance(account.id, parsed, date);
-    toast.success("Balance adjusted");
+    adjustBalance(account.id, parsed, date, hardReset);
+    toast.success(overwrites ? "Balance reset" : "Balance adjusted");
     onClose();
   };
 
@@ -117,9 +122,22 @@ export function AdjustBalanceSheet({
           </div>
 
           <div className="flex flex-col gap-2">
-            <Label htmlFor="adjust-balance-value">
-              New balance {isCard ? "(outstanding)" : ""}
-            </Label>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="adjust-balance-value">
+                New balance {isCard ? "(outstanding)" : ""}
+              </Label>
+              <button
+                type="button"
+                onClick={() => {
+                  setValue("0");
+                  setHardReset(true);
+                  setError(null);
+                }}
+                className="rounded-lg text-[12px] font-medium text-muted-foreground outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                Reset to {currency}0
+              </button>
+            </div>
             <div className="flex items-center gap-2 rounded-xl border border-input bg-card px-3.5">
               <span className="text-muted-foreground">{currency}</span>
               <input
@@ -146,10 +164,39 @@ export function AdjustBalanceSheet({
             />
           </div>
 
+          {supportsAdjustment && (
+            <div className="flex items-center justify-between rounded-2xl border border-border bg-card px-4 py-3 shadow-soft">
+              <div className="flex flex-col pr-3">
+                <span className="text-[15px] font-medium">Hard reset</span>
+                <span className="text-[13px] text-muted-foreground">
+                  Overwrite the balance without adding a transaction entry
+                </span>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={hardReset}
+                aria-label="Hard reset"
+                onClick={() => setHardReset((current) => !current)}
+                className={cn(
+                  "relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+                  hardReset ? "bg-destructive" : "bg-muted",
+                )}
+              >
+                <span
+                  className={cn(
+                    "pointer-events-none block size-5 rounded-full bg-background shadow-sm transition-transform",
+                    hardReset ? "translate-x-[22px]" : "translate-x-0.5",
+                  )}
+                />
+              </button>
+            </div>
+          )}
+
           {hasValue && difference !== 0 && (
             <p className="px-1 text-[12px] text-muted-foreground">
-              {account.type === "credit_card" || account.type === "investment"
-                ? "The opening balance is shifted so the current balance matches."
+              {overwrites
+                ? "The balance is overwritten directly — no transaction is added."
                 : `A ${difference > 0 ? "income" : "expense"} of ${formatMoney(
                     Math.abs(difference),
                     currency,
@@ -163,8 +210,12 @@ export function AdjustBalanceSheet({
             </p>
           )}
 
-          <Button type="submit" size="lg">
-            Save balance
+          <Button
+            type="submit"
+            size="lg"
+            variant={overwrites ? "destructive" : "default"}
+          >
+            {overwrites ? "Reset balance" : "Save balance"}
           </Button>
         </form>
       </SheetContent>

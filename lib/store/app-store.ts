@@ -189,7 +189,12 @@ interface AppState {
     date: string,
     postAdjustment: boolean,
   ) => void;
-  adjustBalance: (accountId: string, newBalance: number, date: string) => void;
+  adjustBalance: (
+    accountId: string,
+    newBalance: number,
+    date: string,
+    hardReset?: boolean,
+  ) => void;
   exportBackup: () => string;
   importBackup: (json: string) => Promise<void>;
   refreshPrices: () => Promise<void>;
@@ -1206,13 +1211,15 @@ export const useAppStore = create<AppState>((set, get) => {
       });
     },
 
-    adjustBalance: (accountId, newBalance, date) => {
+    adjustBalance: (accountId, newBalance, date, hardReset = false) => {
       const account = get().data.accounts.find((a) => a.id === accountId);
       if (!account) return;
       const difference = roundMoney(newBalance - account.balance);
       if (difference === 0) return;
       const usesAdjustmentRow =
-        account.type !== "credit_card" && account.type !== "investment";
+        !hardReset &&
+        account.type !== "credit_card" &&
+        account.type !== "investment";
       const record = {
         id: createId(),
         date,
