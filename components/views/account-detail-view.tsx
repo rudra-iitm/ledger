@@ -252,10 +252,11 @@ export function AccountDetailView() {
           <ArrowLeft aria-hidden className="size-4" />
           Accounts
         </Link>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <Button
             variant="ghost"
             size="sm"
+            className="shrink-0"
             onClick={() => sheets.openAdjustBalance(account.id)}
           >
             <SlidersHorizontal aria-hidden />
@@ -264,12 +265,18 @@ export function AccountDetailView() {
           <Button
             variant="ghost"
             size="sm"
+            className="shrink-0"
             onClick={() => sheets.openReconcile(account.id)}
           >
             <Scale aria-hidden />
             Reconcile
           </Button>
-          <Button variant="ghost" size="sm" onClick={() => sheets.openAccount(account)}>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="shrink-0"
+            onClick={() => sheets.openAccount(account)}
+          >
             <Pencil aria-hidden />
             Edit
           </Button>
