@@ -24,7 +24,8 @@ import {
 } from "@/components/ui/select";
 import { CATEGORIES, type Category } from "@/lib/domain/types";
 import { filterExpenses, totalSpending } from "@/lib/domain/analytics";
-import { visibleInExpenseList } from "@/lib/domain/transactions";
+import { isInvestment, visibleInExpenseList } from "@/lib/domain/transactions";
+import { ShowInvestmentsToggle } from "@/components/fields/show-investments-toggle";
 import { resolveRange } from "@/lib/domain/time-ranges";
 import { formatDisplayDate } from "@/lib/domain/dates";
 import { formatMoney } from "@/lib/domain/money";
@@ -112,6 +113,10 @@ export function ExpensesView() {
 
   const page = filtered.slice(0, visible);
   const hasMore = visible < filtered.length;
+  const hasInvestments = useMemo(
+    () => expenses.some(isInvestment),
+    [expenses],
+  );
 
   useEffect(() => {
     if (!hasMore) return;
@@ -152,8 +157,9 @@ export function ExpensesView() {
         />
       </div>
 
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <TimeRangePicker value={time} onChange={setTime} />
+        {hasInvestments && <ShowInvestmentsToggle className="order-last ml-auto" />}
         <Popover>
           <PopoverTrigger className="inline-flex size-9 items-center justify-center rounded-full border border-border bg-card outline-none transition-colors hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring">
             <SlidersHorizontal aria-hidden className="size-4" />

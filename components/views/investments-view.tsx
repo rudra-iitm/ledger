@@ -11,6 +11,8 @@ import {
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/empty-state";
+import { ExpenseRow } from "@/components/expense-row";
+import { isInvestment } from "@/lib/domain/transactions";
 import { useSheets } from "@/components/sheets/sheet-context";
 import { resolveInstitution } from "@/lib/institutions/registry";
 import { InstitutionIcon } from "@/components/institution-icon";
@@ -67,6 +69,17 @@ export function InvestmentsView() {
   const goalRows = useMemo(
     () => goals.map((goal) => goalProgress(goal, accounts, expenses)),
     [goals, accounts, expenses],
+  );
+  const transactions = useMemo(
+    () =>
+      expenses
+        .filter(isInvestment)
+        .sort((a, b) =>
+          a.date === b.date
+            ? b.createdAt.localeCompare(a.createdAt)
+            : b.date.localeCompare(a.date),
+        ),
+    [expenses],
   );
 
   const hasGain = portfolio.holdings.some(
@@ -201,6 +214,19 @@ export function InvestmentsView() {
           </ul>
         )}
       </section>
+
+      {transactions.length > 0 && (
+        <section aria-label="Investment transactions">
+          <h2 className="mb-2 px-1 text-sm font-medium text-muted-foreground">
+            Transactions
+          </h2>
+          <ul className="-mx-2 flex flex-col">
+            {transactions.map((transaction) => (
+              <ExpenseRow key={transaction.id} expense={transaction} />
+            ))}
+          </ul>
+        </section>
+      )}
 
       {schedules.length > 0 && (
         <section aria-label="Recurring investments">

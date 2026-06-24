@@ -22,7 +22,8 @@ import { QuickAddInput } from "@/components/quick-add-input";
 import { useSheets } from "@/components/sheets/sheet-context";
 import { Progress } from "@/components/ui/progress";
 import { budgetSummary, categoryBudgetSummaries } from "@/lib/domain/budget";
-import { visibleInExpenseList } from "@/lib/domain/transactions";
+import { isInvestment, visibleInExpenseList } from "@/lib/domain/transactions";
+import { ShowInvestmentsToggle } from "@/components/fields/show-investments-toggle";
 import { currentMonth, formatDisplayMonth } from "@/lib/domain/dates";
 import { formatMoney } from "@/lib/domain/money";
 import { useAppStore } from "@/lib/store/app-store";
@@ -52,6 +53,7 @@ export function DashboardView() {
     )
     .slice(0, 5);
   const overBudget = monthlyBudget > 0 && summary.remaining < 0;
+  const hasInvestments = expenses.some(isInvestment);
 
   return (
     <div className="flex flex-col gap-8">
@@ -159,17 +161,20 @@ export function DashboardView() {
       </section>
 
       <section aria-label="Recent expenses">
-        <div className="mb-2 flex items-center justify-between">
+        <div className="mb-2 flex items-center justify-between gap-2">
           <h2 className="text-sm font-medium text-muted-foreground">Recent</h2>
-          {expenses.length > 0 && (
-            <Link
-              href="/expenses"
-              className="inline-flex items-center gap-0.5 rounded-lg text-sm text-muted-foreground outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              See all
-              <ChevronRight aria-hidden className="size-3.5" />
-            </Link>
-          )}
+          <div className="flex items-center gap-2">
+            {hasInvestments && <ShowInvestmentsToggle />}
+            {expenses.length > 0 && (
+              <Link
+                href="/expenses"
+                className="inline-flex items-center gap-0.5 rounded-lg text-sm text-muted-foreground outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                See all
+                <ChevronRight aria-hidden className="size-3.5" />
+              </Link>
+            )}
+          </div>
         </div>
         {recent.length === 0 ? (
           <EmptyState
