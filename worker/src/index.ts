@@ -5,8 +5,9 @@ import {
   runScheduled,
   type PushEnv,
 } from "./push";
+import { handleGroups, type GroupsEnv } from "./groups";
 
-interface Env extends PushEnv {
+interface Env extends PushEnv, GroupsEnv {
   GITHUB_CLIENT_ID: string;
   GITHUB_CLIENT_SECRET: string;
   ALLOWED_ORIGINS?: string;
@@ -28,7 +29,7 @@ function corsHeaders(origin: string | null, env: Env): Record<string, string> {
       : allowed[0] ?? "*";
   return {
     "Access-Control-Allow-Origin": allowOrigin,
-    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+    "Access-Control-Allow-Methods": "GET, POST, PUT, OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type",
     "Access-Control-Max-Age": "86400",
     Vary: "Origin",
@@ -105,6 +106,11 @@ export default {
     if (request.method === "POST" && url.pathname === "/push/unsubscribe") {
       const status = await handleUnsubscribe(request, env);
       return json(status === 200 ? { ok: true } : { error: "Unsubscribe failed" }, status, cors);
+    }
+
+    if (url.pathname === "/groups" || url.pathname.startsWith("/groups/")) {
+      const result = await handleGroups(request, env, url.pathname);
+      return json(result.body, result.status, cors);
     }
 
     if (request.method !== "POST") {

@@ -28,6 +28,7 @@ import { InvestmentSheet } from "./investment-sheet";
 import { RecurringInvestmentSheet } from "./recurring-investment-sheet";
 import { GoalSheet } from "./goal-sheet";
 import { ReconcileSheet } from "./reconcile-sheet";
+import { AdjustBalanceSheet } from "./adjust-balance-sheet";
 
 type ActiveSheet =
   | { kind: "actions" }
@@ -45,6 +46,7 @@ type ActiveSheet =
   | { kind: "recurring-investment"; recurring?: RecurringInvestment }
   | { kind: "goal"; goal?: Goal }
   | { kind: "reconcile"; accountId: string }
+  | { kind: "adjust-balance"; accountId: string }
   | null;
 
 interface SheetApi {
@@ -56,6 +58,7 @@ interface SheetApi {
   openRecurringInvestment: (recurring?: RecurringInvestment) => void;
   openGoal: (goal?: Goal) => void;
   openReconcile: (accountId: string) => void;
+  openAdjustBalance: (accountId: string) => void;
   openRecurring: (recurring?: RecurringExpense) => void;
   openGroup: (group?: Group) => void;
   openGroupExpense: (groupId: string) => void;
@@ -104,6 +107,8 @@ export function SheetProvider({ children }: { children: React.ReactNode }) {
       openGoal: (goal) => setActive({ kind: "goal", goal }),
       openReconcile: (accountId) =>
         setActive({ kind: "reconcile", accountId }),
+      openAdjustBalance: (accountId) =>
+        setActive({ kind: "adjust-balance", accountId }),
       openRecurring: (recurring) => setActive({ kind: "recurring", recurring }),
       openGroup: (data) => setGroup({ open: true, data }),
       openGroupExpense: (groupId) => setActive({ kind: "group-expense", groupId }),
@@ -162,6 +167,11 @@ export function SheetProvider({ children }: { children: React.ReactNode }) {
       <ReconcileSheet
         open={active?.kind === "reconcile"}
         accountId={active?.kind === "reconcile" ? active.accountId : null}
+        onClose={closeSheet}
+      />
+      <AdjustBalanceSheet
+        open={active?.kind === "adjust-balance"}
+        accountId={active?.kind === "adjust-balance" ? active.accountId : null}
         onClose={closeSheet}
       />
       <RecurringSheet

@@ -6,6 +6,7 @@ import {
   Bell,
   ChevronRight,
   Download,
+  LineChart,
   LogOut,
   Smartphone,
   Target,
@@ -208,6 +209,47 @@ export function SettingsView() {
               ))}
             </SelectContent>
           </Select>
+        </div>
+      </section>
+
+      <section aria-label="Display" className="flex flex-col gap-3">
+        <h2 className="px-1 text-sm font-medium text-muted-foreground">
+          Display
+        </h2>
+        <div className="flex items-center justify-between rounded-2xl border border-border bg-card shadow-soft px-4 py-4">
+          <span className="flex items-center gap-3">
+            <LineChart aria-hidden className="size-5 text-muted-foreground" />
+            <span className="flex flex-col">
+              <span className="text-[15px] font-medium">
+                Show investments in Expenses
+              </span>
+              <span className="text-[13px] text-muted-foreground">
+                Include investment buys in Expenses &amp; Recent activity
+              </span>
+            </span>
+          </span>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={settings.showInvestmentsInExpenses}
+            aria-label="Show investments in Expenses and Recent activity"
+            onClick={() =>
+              updateSettings({
+                showInvestmentsInExpenses: !settings.showInvestmentsInExpenses,
+              })
+            }
+            className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background ${
+              settings.showInvestmentsInExpenses ? "bg-emerald-500" : "bg-muted"
+            }`}
+          >
+            <span
+              className={`pointer-events-none block size-5 rounded-full bg-background shadow-sm transition-transform ${
+                settings.showInvestmentsInExpenses
+                  ? "translate-x-[22px]"
+                  : "translate-x-0.5"
+              }`}
+            />
+          </button>
         </div>
       </section>
 

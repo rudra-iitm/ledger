@@ -314,11 +314,26 @@ export const groupExpenseSchema = z.object({
 });
 export type GroupExpense = z.infer<typeof groupExpenseSchema>;
 
+export const groupSettlementSchema = z.object({
+  id: z.string().min(1),
+  from: z.string().min(1),
+  to: z.string().min(1),
+  amount: z.number().positive(),
+  date: isoDate,
+  note: z.string().optional(),
+  createdAt: z.string().min(1),
+});
+export type GroupSettlement = z.infer<typeof groupSettlementSchema>;
+
 export const groupSchema = z.object({
   id: z.string().min(1),
   name: z.string().min(1),
   members: z.array(memberSchema),
   expenses: z.array(groupExpenseSchema),
+  settlements: z.array(groupSettlementSchema).default([]),
+  remoteId: z.string().optional(),
+  rev: z.number().int().nonnegative().optional(),
+  selfMemberId: z.string().optional(),
   createdAt: z.string().min(1),
 });
 export type Group = z.infer<typeof groupSchema>;
@@ -332,6 +347,7 @@ export type Budgets = z.infer<typeof budgetsSchema>;
 export const settingsSchema = z.object({
   currency: z.string().min(1),
   tags: z.array(z.string().min(1)).default([]),
+  showInvestmentsInExpenses: z.boolean().default(false),
 });
 export type Settings = z.infer<typeof settingsSchema>;
 
@@ -446,6 +462,7 @@ export const DEFAULT_BUDGETS: Budgets = {
 export const DEFAULT_SETTINGS: Settings = {
   currency: "₹",
   tags: [],
+  showInvestmentsInExpenses: false,
 };
 
 export const SPACE_ICONS = [

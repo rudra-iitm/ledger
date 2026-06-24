@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/select";
 import { CATEGORIES, type Category } from "@/lib/domain/types";
 import { filterExpenses, totalSpending } from "@/lib/domain/analytics";
+import { visibleInExpenseList } from "@/lib/domain/transactions";
 import { resolveRange } from "@/lib/domain/time-ranges";
 import { formatDisplayDate } from "@/lib/domain/dates";
 import { formatMoney } from "@/lib/domain/money";
@@ -65,14 +66,17 @@ export function ExpensesView() {
   const range = useMemo(() => resolveRange(time.preset, time.custom), [time]);
 
   const filtered = useMemo(() => {
-    const result = filterExpenses(expenses, {
-      range,
-      category,
-      accountId: accountId === ALL_ACCOUNTS ? null : accountId,
-      spaceId: spaceId === ALL_SPACES ? null : spaceId,
-      tags: activeTags,
-      query,
-    });
+    const result = visibleInExpenseList(
+      filterExpenses(expenses, {
+        range,
+        category,
+        accountId: accountId === ALL_ACCOUNTS ? null : accountId,
+        spaceId: spaceId === ALL_SPACES ? null : spaceId,
+        tags: activeTags,
+        query,
+      }),
+      settings.showInvestmentsInExpenses,
+    );
     return result.sort((a, b) => {
       switch (sort) {
         case "date-asc":
@@ -90,7 +94,17 @@ export function ExpensesView() {
             : b.date.localeCompare(a.date);
       }
     });
-  }, [expenses, range, category, accountId, spaceId, activeTags, query, sort]);
+  }, [
+    expenses,
+    range,
+    category,
+    accountId,
+    spaceId,
+    activeTags,
+    query,
+    sort,
+    settings.showInvestmentsInExpenses,
+  ]);
 
   useEffect(() => {
     setVisible(PAGE_SIZE);

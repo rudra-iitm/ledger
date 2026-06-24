@@ -18,6 +18,13 @@ crons = ["0 9 * * *"]
 binding = "PUSH"
 id = "c4373c213846428dac867a9f1296f7a1"
 
+# KV namespace storing shared groups (Splitwise-style multi-user sync).
+# Create it once, then paste the id below:
+#   npx wrangler kv namespace create GROUPS
+[[kv_namespaces]]
+binding = "GROUPS"
+id = "8d52e4613039479c8a3afc302e36f759"
+
 # Secrets (do NOT put these here). Set them with:
 #   npx wrangler secret put GITHUB_CLIENT_ID
 #   npx wrangler secret put GITHUB_CLIENT_SECRET

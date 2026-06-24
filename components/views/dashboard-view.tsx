@@ -22,6 +22,7 @@ import { QuickAddInput } from "@/components/quick-add-input";
 import { useSheets } from "@/components/sheets/sheet-context";
 import { Progress } from "@/components/ui/progress";
 import { budgetSummary, categoryBudgetSummaries } from "@/lib/domain/budget";
+import { visibleInExpenseList } from "@/lib/domain/transactions";
 import { currentMonth, formatDisplayMonth } from "@/lib/domain/dates";
 import { formatMoney } from "@/lib/domain/money";
 import { useAppStore } from "@/lib/store/app-store";
@@ -32,6 +33,9 @@ export function DashboardView() {
   const budgets = useAppStore((state) => state.data.budgets);
   const monthlyBudget = budgets.monthlyBudget;
   const currency = useAppStore((state) => state.data.settings.currency);
+  const showInvestmentsInExpenses = useAppStore(
+    (state) => state.data.settings.showInvestmentsInExpenses,
+  );
   const sheets = useSheets();
 
   const month = currentMonth();
@@ -39,7 +43,8 @@ export function DashboardView() {
   const categoryAlerts = categoryBudgetSummaries(expenses, budgets, month).filter(
     (item) => item.nearLimit || item.overBudget,
   );
-  const recent = [...expenses]
+  const recent = visibleInExpenseList(expenses, showInvestmentsInExpenses)
+    .slice()
     .sort((a, b) =>
       a.date === b.date
         ? b.createdAt.localeCompare(a.createdAt)

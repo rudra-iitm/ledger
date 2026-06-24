@@ -56,7 +56,8 @@ function migrateGroup(raw: unknown): unknown {
           : expense,
       )
     : raw.expenses;
-  return { ...raw, expenses };
+  const settlements = Array.isArray(raw.settlements) ? raw.settlements : [];
+  return { settlements, ...raw, expenses };
 }
 
 function migrateBudgets(raw: unknown): unknown {

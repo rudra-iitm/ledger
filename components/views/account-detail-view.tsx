@@ -3,7 +3,14 @@
 import { useMemo } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { ArrowLeft, CreditCard, Pencil, Scale, Wallet } from "lucide-react";
+import {
+  ArrowLeft,
+  CreditCard,
+  Pencil,
+  Scale,
+  SlidersHorizontal,
+  Wallet,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/empty-state";
 import { ExpenseRow } from "@/components/expense-row";
@@ -246,6 +253,14 @@ export function AccountDetailView() {
           Accounts
         </Link>
         <div className="flex items-center gap-1">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => sheets.openAdjustBalance(account.id)}
+          >
+            <SlidersHorizontal aria-hidden />
+            Adjust
+          </Button>
           <Button
             variant="ghost"
             size="sm"

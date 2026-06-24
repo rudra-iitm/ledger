@@ -18,14 +18,20 @@ export function AccountSelect({
   onChange,
   id,
   allowNone = true,
+  includeInvestment = false,
 }: {
   value: string | undefined;
   onChange: (value: string | undefined) => void;
   id?: string;
   allowNone?: boolean;
+  includeInvestment?: boolean;
 }) {
   const accounts = useAppStore((state) => state.data.accounts);
-  const active = accounts.filter((account) => !account.archived);
+  const active = accounts.filter(
+    (account) =>
+      !account.archived &&
+      (includeInvestment || account.type !== "investment"),
+  );
 
   return (
     <Select

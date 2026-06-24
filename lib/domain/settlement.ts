@@ -52,6 +52,19 @@ export function computeBalances(group: Group): Map<string, number> {
     }
   }
 
+  for (const settlement of group.settlements) {
+    const amount = toMinorUnits(settlement.amount);
+    if (balances.has(settlement.from)) {
+      balances.set(
+        settlement.from,
+        (balances.get(settlement.from) ?? 0) + amount,
+      );
+    }
+    if (balances.has(settlement.to)) {
+      balances.set(settlement.to, (balances.get(settlement.to) ?? 0) - amount);
+    }
+  }
+
   return new Map(
     Array.from(balances, ([id, minor]) => [id, fromMinorUnits(minor)]),
   );

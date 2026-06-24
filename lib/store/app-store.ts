@@ -24,6 +24,14 @@ import { materializeSubscriptions } from "../domain/subscriptions";
 import { materializeInvestments } from "../domain/recurring-investments";
 import { recomputeBalances } from "../domain/balances";
 import { buildPriceParams, priceUpdates } from "../domain/prices";
+import {
+  createRemoteGroup,
+  fetchRemoteGroup,
+  joinRemoteGroup,
+  mergeSharedIntoLocal,
+  pushRemoteGroup,
+  sharedToLocal,
+} from "../groups/sync";
 import { roundMoney } from "../domain/money";
 import type {
   Account,
@@ -33,6 +41,7 @@ import type {
   Expense,
   Group,
   GroupExpense,
+  GroupSettlement,
   Member,
   RecurringExpense,
   Settings,
@@ -97,6 +106,14 @@ interface AppState {
     expense: Omit<GroupExpense, "id" | "createdAt">,
   ) => void;
   deleteGroupExpense: (groupId: string, expenseId: string) => void;
+  recordGroupSettlement: (
+    groupId: string,
+    settlement: Omit<GroupSettlement, "id" | "createdAt">,
+  ) => void;
+  deleteGroupSettlement: (groupId: string, settlementId: string) => void;
+  shareGroup: (groupId: string) => Promise<boolean>;
+  syncGroup: (groupId: string) => Promise<void>;
+  joinGroup: (remoteId: string, displayName: string) => Promise<string | null>;
   addAccount: (
     account: Omit<Account, "id" | "createdAt" | "reconciliations">,
   ) => string;
@@ -172,6 +189,7 @@ interface AppState {
     date: string,
     postAdjustment: boolean,
   ) => void;
+  adjustBalance: (accountId: string, newBalance: number, date: string) => void;
   exportBackup: () => string;
   importBackup: (json: string) => Promise<void>;
   refreshPrices: () => Promise<void>;
@@ -351,6 +369,38 @@ export const useAppStore = create<AppState>((set, get) => {
     }
     if (accountsChanged) persist("accounts", data, set);
     void get().refreshPrices();
+  };
+
+  const setGroup = (groupId: string, next: Group): void => {
+    mutate("groups", ({ groups }) =>
+      groups.map((group) => (group.id === groupId ? next : group)),
+    );
+  };
+
+  const pushGroup = async (groupId: string): Promise<void> => {
+    const group = get().data.groups.find((item) => item.id === groupId);
+    if (!group?.remoteId) return;
+    const result = await pushRemoteGroup(group.remoteId, group.rev, group);
+    if (result.status === "ok") {
+      const latest = get().data.groups.find((item) => item.id === groupId);
+      if (latest) setGroup(groupId, { ...latest, rev: result.group.rev });
+      return;
+    }
+    if (result.status === "conflict") {
+      const latest = get().data.groups.find((item) => item.id === groupId);
+      if (!latest) return;
+      const merged = mergeSharedIntoLocal(latest, result.group);
+      setGroup(groupId, merged);
+      const retry = await pushRemoteGroup(
+        merged.remoteId ?? group.remoteId,
+        result.group.rev,
+        merged,
+      );
+      if (retry.status === "ok") {
+        const after = get().data.groups.find((item) => item.id === groupId);
+        if (after) setGroup(groupId, { ...after, rev: retry.group.rev });
+      }
+    }
   };
 
   return {
@@ -586,25 +636,30 @@ export const useAppStore = create<AppState>((set, get) => {
       ),
 
     addGroup: (name, memberNames) =>
-      mutate("groups", ({ groups }) => [
-        ...groups,
-        {
-          id: createId(),
-          name,
-          members: memberNames.map(
-            (memberName): Member => ({ id: createId(), name: memberName }),
-          ),
-          expenses: [],
-          createdAt: new Date().toISOString(),
-        },
-      ]),
+      mutate("groups", ({ groups }) => {
+        const members = memberNames.map(
+          (memberName): Member => ({ id: createId(), name: memberName }),
+        );
+        return [
+          ...groups,
+          {
+            id: createId(),
+            name,
+            members,
+            expenses: [],
+            settlements: [],
+            selfMemberId: members[0]?.id,
+            createdAt: new Date().toISOString(),
+          },
+        ];
+      }),
 
     deleteGroup: (id) =>
       mutate("groups", ({ groups }) =>
         groups.filter((group) => group.id !== id),
       ),
 
-    addMember: (groupId, name) =>
+    addMember: (groupId, name) => {
       mutate("groups", ({ groups }) =>
         groups.map(
           (group): Group =>
@@ -615,9 +670,11 @@ export const useAppStore = create<AppState>((set, get) => {
                 }
               : group,
         ),
-      ),
+      );
+      void pushGroup(groupId);
+    },
 
-    addGroupExpense: (groupId, expense) =>
+    addGroupExpense: (groupId, expense) => {
       mutate("groups", ({ groups }) =>
         groups.map(
           (group): Group =>
@@ -635,9 +692,11 @@ export const useAppStore = create<AppState>((set, get) => {
                 }
               : group,
         ),
-      ),
+      );
+      void pushGroup(groupId);
+    },
 
-    deleteGroupExpense: (groupId, expenseId) =>
+    deleteGroupExpense: (groupId, expenseId) => {
       mutate("groups", ({ groups }) =>
         groups.map(
           (group): Group =>
@@ -650,7 +709,106 @@ export const useAppStore = create<AppState>((set, get) => {
                 }
               : group,
         ),
-      ),
+      );
+      void pushGroup(groupId);
+    },
+
+    recordGroupSettlement: (groupId, settlement) => {
+      mutate("groups", ({ groups }) =>
+        groups.map(
+          (group): Group =>
+            group.id === groupId
+              ? {
+                  ...group,
+                  settlements: [
+                    {
+                      ...settlement,
+                      id: createId(),
+                      createdAt: new Date().toISOString(),
+                    },
+                    ...group.settlements,
+                  ],
+                }
+              : group,
+        ),
+      );
+      void pushGroup(groupId);
+    },
+
+    deleteGroupSettlement: (groupId, settlementId) => {
+      mutate("groups", ({ groups }) =>
+        groups.map(
+          (group): Group =>
+            group.id === groupId
+              ? {
+                  ...group,
+                  settlements: group.settlements.filter(
+                    (item) => item.id !== settlementId,
+                  ),
+                }
+              : group,
+        ),
+      );
+      void pushGroup(groupId);
+    },
+
+    shareGroup: async (groupId) => {
+      const group = get().data.groups.find((item) => item.id === groupId);
+      if (!group) return false;
+      if (group.remoteId) return true;
+      const shared = await createRemoteGroup(group);
+      if (!shared) return false;
+      const latest = get().data.groups.find((item) => item.id === groupId);
+      if (!latest) return false;
+      setGroup(groupId, {
+        ...latest,
+        remoteId: shared.id,
+        rev: shared.rev,
+      });
+      return true;
+    },
+
+    syncGroup: async (groupId) => {
+      const group = get().data.groups.find((item) => item.id === groupId);
+      if (!group?.remoteId) return;
+      const shared = await fetchRemoteGroup(group.remoteId);
+      if (!shared) return;
+      const latest = get().data.groups.find((item) => item.id === groupId);
+      if (!latest) return;
+      const merged = mergeSharedIntoLocal(latest, shared);
+      const localExtra =
+        merged.expenses.length !== shared.expenses.length ||
+        merged.settlements.length !== shared.settlements.length ||
+        merged.members.length !== shared.members.length;
+      setGroup(groupId, merged);
+      if (localExtra) void pushGroup(groupId);
+    },
+
+    joinGroup: async (remoteId, displayName) => {
+      const existing = get().data.groups.find(
+        (item) => item.remoteId === remoteId,
+      );
+      const member: Member = { id: createId(), name: displayName.trim() };
+      const shared = await joinRemoteGroup(remoteId, member);
+      if (!shared) return null;
+      if (existing) {
+        const merged = mergeSharedIntoLocal(existing, shared);
+        setGroup(existing.id, {
+          ...merged,
+          selfMemberId: existing.selfMemberId ?? member.id,
+        });
+        return existing.id;
+      }
+      const localId = createId();
+      const local = sharedToLocal(
+        shared,
+        localId,
+        member.id,
+        new Date().toISOString(),
+      );
+      mutate("groups", ({ groups }) => [...groups, local]);
+      return localId;
+    },
 
     addAccount: (account) => {
       const id = createId();
@@ -1034,6 +1192,56 @@ export const useAppStore = create<AppState>((set, get) => {
           id: createId(),
           type: isIncome ? "income" : "expense",
           description: "Reconciliation adjustment",
+          amount: Math.abs(difference),
+          category: "Other",
+          incomeCategory: isIncome ? "Other" : undefined,
+          date,
+          accountId,
+          affectsBalance: true,
+          tags: [],
+          attachments: [],
+          createdAt: new Date().toISOString(),
+        };
+        return { accounts: nextAccounts, expenses: [adjustment, ...expenses] };
+      });
+    },
+
+    adjustBalance: (accountId, newBalance, date) => {
+      const account = get().data.accounts.find((a) => a.id === accountId);
+      if (!account) return;
+      const difference = roundMoney(newBalance - account.balance);
+      if (difference === 0) return;
+      const usesAdjustmentRow =
+        account.type !== "credit_card" && account.type !== "investment";
+      const record = {
+        id: createId(),
+        date,
+        actualBalance: newBalance,
+        appBalance: account.balance,
+        difference,
+        adjusted: true,
+        createdAt: new Date().toISOString(),
+      };
+      mutateLedger(({ expenses, accounts }) => {
+        const nextAccounts = accounts.map((a) =>
+          a.id === accountId
+            ? {
+                ...a,
+                reconciledBalance: newBalance,
+                reconciledDate: date,
+                reconciliations: [record, ...a.reconciliations],
+                ...(usesAdjustmentRow
+                  ? {}
+                  : { openingBalance: roundMoney(a.openingBalance + difference) }),
+              }
+            : a,
+        );
+        if (!usesAdjustmentRow) return { accounts: nextAccounts };
+        const isIncome = difference > 0;
+        const adjustment: Expense = {
+          id: createId(),
+          type: isIncome ? "income" : "expense",
+          description: "Balance adjustment",
           amount: Math.abs(difference),
           category: "Other",
           incomeCategory: isIncome ? "Other" : undefined,
