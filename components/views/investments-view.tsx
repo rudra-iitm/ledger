@@ -1,8 +1,10 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState } from "react";
 import {
   CalendarClock,
+  ChevronRight,
   LineChart,
   Plus,
   RefreshCw,
@@ -217,11 +219,20 @@ export function InvestmentsView() {
 
       {transactions.length > 0 && (
         <section aria-label="Investment transactions">
-          <h2 className="mb-2 px-1 text-sm font-medium text-muted-foreground">
-            Transactions
-          </h2>
+          <div className="mb-2 flex items-center justify-between gap-2 px-1">
+            <h2 className="text-sm font-medium text-muted-foreground">
+              Transactions
+            </h2>
+            <Link
+              href="/investments/transactions"
+              className="inline-flex items-center gap-0.5 rounded-lg text-sm text-muted-foreground outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              See all
+              <ChevronRight aria-hidden className="size-3.5" />
+            </Link>
+          </div>
           <ul className="-mx-2 flex flex-col">
-            {transactions.map((transaction) => (
+            {transactions.slice(0, 5).map((transaction) => (
               <ExpenseRow key={transaction.id} expense={transaction} />
             ))}
           </ul>

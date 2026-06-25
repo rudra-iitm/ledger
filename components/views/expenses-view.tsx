@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ArrowDownUp, ReceiptText, Search, SlidersHorizontal } from "lucide-react";
 import { EmptyState } from "@/components/empty-state";
 import { ExpenseRow } from "@/components/expense-row";
@@ -22,7 +22,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { CATEGORIES, type Category } from "@/lib/domain/types";
+import {
+  ASSET_TYPES,
+  ASSET_TYPE_LABELS,
+  CATEGORIES,
+  type AssetType,
+  type Category,
+} from "@/lib/domain/types";
 import { filterExpenses, totalSpending } from "@/lib/domain/analytics";
 import { isInvestment, visibleInExpenseList } from "@/lib/domain/transactions";
 import { ShowInvestmentsToggle } from "@/components/fields/show-investments-toggle";
@@ -45,7 +51,13 @@ const PAGE_SIZE = 25;
 const ALL_ACCOUNTS = "__all__";
 const ALL_SPACES = "__all_spaces__";
 
-export function ExpensesView() {
+interface ExpensesViewProps {
+  scope?: "all" | "investments";
+}
+
+export function ExpensesView({ scope = "all" }: ExpensesViewProps = {}) {
+  const investmentsOnly = scope === "investments";
+  const noun = investmentsOnly ? "transaction" : "expense";
   const expenses = useAppStore((state) => state.data.expenses);
   const settings = useAppStore((state) => state.data.settings);
   const accounts = useAppStore((state) => state.data.accounts);
@@ -53,6 +65,7 @@ export function ExpensesView() {
 
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState<Category | null>(null);
+  const [assetType, setAssetType] = useState<AssetType | null>(null);
   const [accountId, setAccountId] = useState(ALL_ACCOUNTS);
   const [spaceId, setSpaceId] = useState(ALL_SPACES);
   const [activeTags, setActiveTags] = useState<string[]>([]);
@@ -66,18 +79,47 @@ export function ExpensesView() {
 
   const range = useMemo(() => resolveRange(time.preset, time.custom), [time]);
 
+  const assetTypeByAccount = useMemo(() => {
+    const map = new Map<string, AssetType>();
+    for (const account of accounts) {
+      if (account.assetType) map.set(account.id, account.assetType);
+    }
+    return map;
+  }, [accounts]);
+
+  const assetTypeOf = useCallback(
+    (expense: { transferAccountId?: string }) =>
+      expense.transferAccountId
+        ? assetTypeByAccount.get(expense.transferAccountId)
+        : undefined,
+    [assetTypeByAccount],
+  );
+
+  const presentAssetTypes = useMemo(() => {
+    if (!investmentsOnly) return [];
+    const present = new Set<AssetType>();
+    for (const expense of expenses) {
+      if (!isInvestment(expense)) continue;
+      const type = assetTypeOf(expense);
+      if (type) present.add(type);
+    }
+    return ASSET_TYPES.filter((type) => present.has(type));
+  }, [investmentsOnly, expenses, assetTypeOf]);
+
   const filtered = useMemo(() => {
-    const result = visibleInExpenseList(
-      filterExpenses(expenses, {
-        range,
-        category,
-        accountId: accountId === ALL_ACCOUNTS ? null : accountId,
-        spaceId: spaceId === ALL_SPACES ? null : spaceId,
-        tags: activeTags,
-        query,
-      }),
-      settings.showInvestmentsInExpenses,
-    );
+    const matched = filterExpenses(expenses, {
+      range,
+      category,
+      accountId: accountId === ALL_ACCOUNTS ? null : accountId,
+      spaceId: spaceId === ALL_SPACES ? null : spaceId,
+      tags: activeTags,
+      query,
+    });
+    const result = investmentsOnly
+      ? matched
+          .filter(isInvestment)
+          .filter((expense) => !assetType || assetTypeOf(expense) === assetType)
+      : visibleInExpenseList(matched, settings.showInvestmentsInExpenses);
     return result.sort((a, b) => {
       switch (sort) {
         case "date-asc":
@@ -105,11 +147,14 @@ export function ExpensesView() {
     query,
     sort,
     settings.showInvestmentsInExpenses,
+    investmentsOnly,
+    assetType,
+    assetTypeOf,
   ]);
 
   useEffect(() => {
     setVisible(PAGE_SIZE);
-  }, [range, category, accountId, spaceId, activeTags, query, sort]);
+  }, [range, category, assetType, accountId, spaceId, activeTags, query, sort]);
 
   const page = filtered.slice(0, visible);
   const hasMore = visible < filtered.length;
@@ -159,7 +204,9 @@ export function ExpensesView() {
 
       <div className="flex flex-wrap items-center gap-2">
         <TimeRangePicker value={time} onChange={setTime} />
-        {hasInvestments && <ShowInvestmentsToggle className="order-last ml-auto" />}
+        {!investmentsOnly && hasInvestments && (
+          <ShowInvestmentsToggle className="order-last ml-auto" />
+        )}
         <Popover>
           <PopoverTrigger className="inline-flex size-9 items-center justify-center rounded-full border border-border bg-card outline-none transition-colors hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring">
             <SlidersHorizontal aria-hidden className="size-4" />
@@ -286,46 +333,84 @@ export function ExpensesView() {
         </Popover>
       </div>
 
-      <div
-        role="group"
-        aria-label="Filter by category"
-        className="-mx-5 flex gap-2 overflow-x-auto px-5 pb-1 [scrollbar-width:none]"
-      >
-        {[null, ...CATEGORIES].map((item) => {
-          const selected = category === item;
-          return (
-            <button
-              key={item ?? "all"}
-              type="button"
-              aria-pressed={selected}
-              onClick={() => setCategory(item)}
-              className={cn(
-                "shrink-0 rounded-full border px-3.5 py-1.5 text-[13px] font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
-                selected
-                  ? "border-transparent bg-primary text-primary-foreground"
-                  : "border-border bg-card text-muted-foreground hover:text-foreground",
-              )}
-            >
-              {item ?? "All"}
-            </button>
-          );
-        })}
-      </div>
+      {investmentsOnly ? (
+        presentAssetTypes.length > 0 && (
+          <div
+            role="group"
+            aria-label="Filter by asset type"
+            className="-mx-5 flex gap-2 overflow-x-auto px-5 pb-1 [scrollbar-width:none]"
+          >
+            {[null, ...presentAssetTypes].map((item) => {
+              const selected = assetType === item;
+              return (
+                <button
+                  key={item ?? "all"}
+                  type="button"
+                  aria-pressed={selected}
+                  onClick={() => setAssetType(item)}
+                  className={cn(
+                    "shrink-0 rounded-full border px-3.5 py-1.5 text-[13px] font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
+                    selected
+                      ? "border-transparent bg-primary text-primary-foreground"
+                      : "border-border bg-card text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  {item ? ASSET_TYPE_LABELS[item] : "All"}
+                </button>
+              );
+            })}
+          </div>
+        )
+      ) : (
+        <div
+          role="group"
+          aria-label="Filter by category"
+          className="-mx-5 flex gap-2 overflow-x-auto px-5 pb-1 [scrollbar-width:none]"
+        >
+          {[null, ...CATEGORIES].map((item) => {
+            const selected = category === item;
+            return (
+              <button
+                key={item ?? "all"}
+                type="button"
+                aria-pressed={selected}
+                onClick={() => setCategory(item)}
+                className={cn(
+                  "shrink-0 rounded-full border px-3.5 py-1.5 text-[13px] font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
+                  selected
+                    ? "border-transparent bg-primary text-primary-foreground"
+                    : "border-border bg-card text-muted-foreground hover:text-foreground",
+                )}
+              >
+                {item ?? "All"}
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {filtered.length === 0 ? (
         <EmptyState
           icon={ReceiptText}
-          title={expenses.length === 0 ? "No expenses yet" : "Nothing matches"}
+          title={
+            investmentsOnly
+              ? "No investment transactions"
+              : expenses.length === 0
+                ? "No expenses yet"
+                : "Nothing matches"
+          }
           description={
-            expenses.length === 0
-              ? "Tap the plus button to add your first expense."
-              : "Try a different search, time range, or filter."
+            investmentsOnly
+              ? "Record an investment to see it here, or adjust your filters."
+              : expenses.length === 0
+                ? "Tap the plus button to add your first expense."
+                : "Try a different search, time range, or filter."
           }
         />
       ) : (
         <>
           <p className="px-1 text-[13px] text-muted-foreground">
-            {filtered.length} {filtered.length === 1 ? "expense" : "expenses"} ·{" "}
+            {filtered.length} {filtered.length === 1 ? noun : `${noun}s`} ·{" "}
             {formatMoney(totalSpending(filtered), settings.currency)}
           </p>
 
