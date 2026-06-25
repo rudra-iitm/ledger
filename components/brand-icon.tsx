@@ -16,7 +16,7 @@ interface BrandIconProps {
 }
 
 export function BrandIcon({ brand, fallbackCategory, size = "sm", className }: BrandIconProps) {
-  const [imageError, setImageError] = useState(false);
+  const [imageError, setImageError] = useState<"none" | "favicone" | "google">("none");
 
   const sizeClasses = {
     sm: "size-10 rounded-xl",
@@ -51,7 +51,10 @@ export function BrandIcon({ brand, fallbackCategory, size = "sm", className }: B
     );
   }
 
-  const logoUrl = brand.domain ? `https://www.google.com/s2/favicons?domain=${brand.domain}&sz=128` : null;
+  const faviconeUrl = brand.domain ? `https://favicone.com/${brand.domain}?s=128` : null;
+  const googleUrl = brand.domain ? `https://www.google.com/s2/favicons?domain=${brand.domain}&sz=128` : null;
+
+  const currentUrl = imageError === "none" ? faviconeUrl : imageError === "favicone" ? googleUrl : null;
 
   return (
     <span
@@ -63,19 +66,20 @@ export function BrandIcon({ brand, fallbackCategory, size = "sm", className }: B
       )}
       style={{
         boxShadow: `0 4px 12px -2px ${brand.accentColor}25, inset 0 1px 0 0 rgba(255,255,255,0.05)`,
+        backgroundColor: currentUrl ? "#FFFFFF" : undefined,
       }}
     >
-      {logoUrl && !imageError ? (
-        <img 
-          src={logoUrl} 
+      {currentUrl ? (
+        <img
+          src={currentUrl}
           alt={brand.name}
-          onError={() => setImageError(true)}
+          onError={() => setImageError(prev => prev === "none" ? "favicone" : "google")}
           className="size-full object-contain"
         />
       ) : (
-        <BrandLogoSvg 
-          id={brand.id} 
-          className={iconClasses[size]} 
+        <BrandLogoSvg
+          id={brand.id}
+          className={iconClasses[size]}
         />
       )}
     </span>

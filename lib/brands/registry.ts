@@ -10,27 +10,27 @@ export interface Brand {
 }
 
 export const BRAND_REGISTRY: Brand[] = [
-  { id: "uber", name: "Uber", aliases: ["uber india", "uber trip", "uber.com"], category: "Travel", accentColor: "#FFFFFF" },
-  { id: "ola", name: "Ola", aliases: ["ola cabs", "olacabs"], category: "Travel", accentColor: "#D6DF27" },
+  { id: "uber", name: "Uber", aliases: ["uber india", "uber trip", "uber.com"], category: "Travel", accentColor: "#FFFFFF", domain: "uber.com" },
+  { id: "ola", name: "Ola", aliases: ["ola cabs", "olacabs"], category: "Travel", accentColor: "#D6DF27", domain: "olacabs.com" },
   { id: "rapido", name: "Rapido", aliases: ["rapido bike"], category: "Travel", accentColor: "#F9C51B", domain: "rapido.bike" },
   { id: "indrive", name: "inDrive", aliases: ["indrive"], category: "Travel", accentColor: "#A0D911", domain: "indrive.com" },
   
-  { id: "swiggy", name: "Swiggy", aliases: ["swiggy limited", "swiggy instamart", "bundl technologies"], category: "Food", accentColor: "#FC8019" },
+  { id: "swiggy", name: "Swiggy", aliases: ["swiggy limited", "swiggy instamart", "bundl technologies"], category: "Food", accentColor: "#FC8019", domain: "swiggy.com" },
   { id: "zomato", name: "Zomato", aliases: ["zomato online", "zomato media"], category: "Food", accentColor: "#E23744", domain: "zomato.com" },
   { id: "blinkit", name: "Blinkit", aliases: ["grofers"], category: "Shopping", accentColor: "#F8CB46", domain: "blinkit.com" },
   { id: "zepto", name: "Zepto", aliases: ["kirana kart"], category: "Shopping", accentColor: "#FF3269", domain: "zeptonow.com" },
   { id: "instamart", name: "Instamart", aliases: [], category: "Shopping", accentColor: "#FC8019", domain: "swiggy.com" },
 
-  { id: "amazon", name: "Amazon", aliases: ["amazon seller services", "amazon pay india", "amzn", "amazon.in"], category: "Shopping", accentColor: "#FF9900" },
+  { id: "amazon", name: "Amazon", aliases: ["amazon seller services", "amazon pay india", "amzn", "amazon.in"], category: "Shopping", accentColor: "#FF9900", domain: "amazon.in" },
   { id: "flipkart", name: "Flipkart", aliases: ["flipkart internet"], category: "Shopping", accentColor: "#2874F0", domain: "flipkart.com" },
   { id: "myntra", name: "Myntra", aliases: ["myntra designs"], category: "Shopping", accentColor: "#FF3F6C", domain: "myntra.com" },
   { id: "ajio", name: "Ajio", aliases: ["reliance retail"], category: "Shopping", accentColor: "#2F4254", domain: "ajio.com" },
   { id: "meesho", name: "Meesho", aliases: ["fashnear technologies"], category: "Shopping", accentColor: "#F43397", domain: "meesho.com" },
 
-  { id: "netflix", name: "Netflix", aliases: ["netflix india", "netflix.com", "netflix premium"], category: "Entertainment", accentColor: "#E50914" },
-  { id: "spotify", name: "Spotify", aliases: ["spotify india", "spotify premium"], category: "Entertainment", accentColor: "#1DB954" },
-  { id: "youtube_premium", name: "YouTube Premium", aliases: ["google youtube", "youtube", "youtube.com"], category: "Entertainment", accentColor: "#FF0000" },
-  { id: "amazon_prime", name: "Amazon Prime Video", aliases: ["prime video", "amazon prime"], category: "Entertainment", accentColor: "#00A8E1" },
+  { id: "netflix", name: "Netflix", aliases: ["netflix india", "netflix.com", "netflix premium"], category: "Entertainment", accentColor: "#E50914", domain: "netflix.com" },
+  { id: "spotify", name: "Spotify", aliases: ["spotify india", "spotify premium"], category: "Entertainment", accentColor: "#1DB954", domain: "spotify.com" },
+  { id: "youtube_premium", name: "YouTube Premium", aliases: ["google youtube", "youtube", "youtube.com"], category: "Entertainment", accentColor: "#FF0000", domain: "youtube.com" },
+  { id: "amazon_prime", name: "Amazon Prime Video", aliases: ["prime video", "amazon prime"], category: "Entertainment", accentColor: "#00A8E1", domain: "primevideo.com" },
   { id: "hotstar", name: "Disney+ Hotstar", aliases: ["hotstar", "novi digital", "disney plus hotstar"], category: "Entertainment", accentColor: "#121926", domain: "hotstar.com" },
   { id: "jiohotstar", name: "JioHotstar", aliases: ["jio hotstar"], category: "Entertainment", accentColor: "#0F4594", domain: "hotstar.com" },
   { id: "sonyliv", name: "Sony LIV", aliases: ["sonyliv", "sony pictures networks"], category: "Entertainment", accentColor: "#E01A22", domain: "sonyliv.com" },
