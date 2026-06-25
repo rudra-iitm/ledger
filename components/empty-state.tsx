@@ -1,13 +1,16 @@
+import type { ReactNode } from "react";
 import type { LucideIcon } from "lucide-react";
 
 export function EmptyState({
   icon: Icon,
   title,
   description,
+  action,
 }: {
   icon: LucideIcon;
   title: string;
   description: string;
+  action?: ReactNode;
 }) {
   return (
     <div className="flex flex-col items-center gap-4 rounded-3xl border border-dashed border-border px-6 py-14 text-center">
@@ -20,6 +23,7 @@ export function EmptyState({
           {description}
         </p>
       </div>
+      {action && <div className="mt-1">{action}</div>}
     </div>
   );
 }

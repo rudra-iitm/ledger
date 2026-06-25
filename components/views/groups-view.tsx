@@ -1,27 +1,43 @@
 "use client";
 
 import Link from "next/link";
-import { ChevronRight, Users } from "lucide-react";
+import { ChevronRight, Plus, Users } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/empty-state";
+import { useSheets } from "@/components/sheets/sheet-context";
 import { formatMoney, roundMoney } from "@/lib/domain/money";
 import { useAppStore } from "@/lib/store/app-store";
 
 export function GroupsView() {
   const groups = useAppStore((state) => state.data.groups);
   const currency = useAppStore((state) => state.data.settings.currency);
+  const sheets = useSheets();
 
   if (groups.length === 0) {
     return (
       <EmptyState
         icon={Users}
         title="No groups yet"
-        description="Create a group from the plus button to split bills with friends."
+        description="Create a group to split bills with friends."
+        action={
+          <Button onClick={() => sheets.openGroup()}>
+            <Plus aria-hidden />
+            New group
+          </Button>
+        }
       />
     );
   }
 
   return (
-    <ul className="flex flex-col gap-3">
+    <div className="flex flex-col gap-4">
+      <div className="flex justify-end">
+        <Button size="sm" variant="secondary" onClick={() => sheets.openGroup()}>
+          <Plus aria-hidden />
+          New group
+        </Button>
+      </div>
+      <ul className="flex flex-col gap-3">
       {groups.map((group) => {
         const total = roundMoney(
           group.expenses.reduce((sum, expense) => sum + expense.amount, 0),
@@ -57,6 +73,7 @@ export function GroupsView() {
           </li>
         );
       })}
-    </ul>
+      </ul>
+    </div>
   );
 }
