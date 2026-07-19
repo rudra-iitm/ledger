@@ -36,7 +36,7 @@ function firstOccurrence(item: RecurringInvestment): string {
   }
 }
 
-function advance(item: RecurringInvestment, date: string): string {
+export function advanceInvestment(item: RecurringInvestment, date: string): string {
   switch (item.frequency) {
     case "daily":
       return addDays(date, 1);
@@ -56,12 +56,12 @@ function advance(item: RecurringInvestment, date: string): string {
 function occurrences(item: RecurringInvestment, today: string): string[] {
   const result: string[] = [];
   let date = item.lastMaterializedDate
-    ? advance(item, item.lastMaterializedDate)
+    ? advanceInvestment(item, item.lastMaterializedDate)
     : firstOccurrence(item);
   let guard = 0;
   while (date <= today && guard < 10_000) {
     result.push(date);
-    date = advance(item, date);
+    date = advanceInvestment(item, date);
     guard += 1;
   }
   return result;
@@ -111,11 +111,11 @@ export function nextInvestmentDate(
 ): string {
   const today = todayISO(now);
   let date = item.lastMaterializedDate
-    ? advance(item, item.lastMaterializedDate)
+    ? advanceInvestment(item, item.lastMaterializedDate)
     : firstOccurrence(item);
   let guard = 0;
   while (date < today && guard < 10_000) {
-    date = advance(item, date);
+    date = advanceInvestment(item, date);
     guard += 1;
   }
   return date;

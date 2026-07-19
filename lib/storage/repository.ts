@@ -29,8 +29,10 @@ import {
   goalsFileSchema,
   type InboxData,
   type Rule,
+  type Snapshot,
   inboxSchema,
   rulesFileSchema,
+  snapshotsFileSchema,
   DEFAULT_INBOX,
 } from "../domain/types";
 
@@ -48,6 +50,7 @@ export interface LedgerData {
   goals: Goal[];
   inbox: InboxData;
   rules: Rule[];
+  snapshots: Snapshot[];
 }
 
 export const EMPTY_DATA: LedgerData = {
@@ -64,6 +67,7 @@ export const EMPTY_DATA: LedgerData = {
   goals: [],
   inbox: DEFAULT_INBOX,
   rules: [],
+  snapshots: [],
 };
 
 export const FILE_SCHEMAS = {
@@ -80,6 +84,7 @@ export const FILE_SCHEMAS = {
   goals: goalsFileSchema,
   inbox: inboxSchema,
   rules: rulesFileSchema,
+  snapshots: snapshotsFileSchema,
 } satisfies Record<DataFile, z.ZodType>;
 
 export interface LoadResult {
@@ -132,6 +137,7 @@ export class LedgerRepository {
       goals,
       inbox,
       rules,
+      snapshots,
     ] = await Promise.all([
       this.readCollection("expenses", EMPTY_DATA.expenses, invalid),
       this.readCollection("recurring", EMPTY_DATA.recurring, invalid),
@@ -150,6 +156,7 @@ export class LedgerRepository {
       this.readCollection("goals", EMPTY_DATA.goals, invalid),
       this.readCollection("inbox", EMPTY_DATA.inbox, invalid),
       this.readCollection("rules", EMPTY_DATA.rules, invalid),
+      this.readCollection("snapshots", EMPTY_DATA.snapshots, invalid),
     ]);
     return {
       data: {
@@ -166,6 +173,7 @@ export class LedgerRepository {
         goals,
         inbox,
         rules,
+        snapshots,
       },
       invalidFiles: invalid,
     };

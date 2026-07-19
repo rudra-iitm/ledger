@@ -32,7 +32,7 @@ function firstOccurrence(item: RecurringExpense): string {
   }
 }
 
-function advance(item: RecurringExpense, date: string): string {
+export function advance(item: RecurringExpense, date: string): string {
   switch (item.frequency) {
     case "daily":
       return addDays(date, 1);

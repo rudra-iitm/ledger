@@ -447,6 +447,22 @@ export type Goal = z.infer<typeof goalSchema>;
 export const recurringInvestmentsFileSchema = z.array(recurringInvestmentSchema);
 export const goalsFileSchema = z.array(goalSchema);
 
+export const snapshotSchema = z.object({
+  month: z.string().regex(/^\d{4}-\d{2}$/),
+  capturedAt: z.string().min(1),
+  netWorth: z.number(),
+  assetsTotal: z.number(),
+  liabilitiesTotal: z.number(),
+  invested: z.number().default(0),
+  portfolioValue: z.number().default(0),
+  accounts: z
+    .array(z.object({ accountId: z.string().min(1), balance: z.number() }))
+    .default([]),
+});
+export type Snapshot = z.infer<typeof snapshotSchema>;
+
+export const snapshotsFileSchema = z.array(snapshotSchema);
+
 export const draftDirectionSchema = z.enum(["debit", "credit"]);
 export type DraftDirection = z.infer<typeof draftDirectionSchema>;
 

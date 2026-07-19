@@ -12,6 +12,7 @@ export const DATA_FILES = [
   "goals",
   "inbox",
   "rules",
+  "snapshots",
 ] as const;
 
 export type DataFile = (typeof DATA_FILES)[number];

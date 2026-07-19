@@ -21,6 +21,7 @@ import {
 } from "../storage/attachments";
 import { GitHubAttachmentStore } from "../storage/github-attachments";
 import { materializeRecurring } from "../domain/recurring";
+import { buildSnapshot, upsertSnapshot } from "../domain/snapshots";
 import { materializeSubscriptions } from "../domain/subscriptions";
 import { materializeInvestments } from "../domain/recurring-investments";
 import { recomputeBalances } from "../domain/balances";
@@ -433,7 +434,15 @@ export const useAppStore = create<AppState>((set, get) => {
       persist("recurringInvestments", data, set);
     }
     if (accountsChanged) persist("accounts", data, set);
+    maybeCaptureSnapshot();
     void get().refreshPrices();
+  };
+
+  const maybeCaptureSnapshot = (): void => {
+    const { accounts, expenses, snapshots } = get().data;
+    const result = upsertSnapshot(snapshots, buildSnapshot(accounts, expenses));
+    if (!result.changed) return;
+    mutate("snapshots", () => result.history);
   };
 
   const setGroup = (groupId: string, next: Group): void => {
@@ -1382,6 +1391,7 @@ export const useAppStore = create<AppState>((set, get) => {
               : account;
           }),
         }));
+        maybeCaptureSnapshot();
       } catch {
         /* prices are best-effort */
       }

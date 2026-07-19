@@ -3,16 +3,28 @@
 import { useState } from "react";
 
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { Plus, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/empty-state";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useSheets } from "@/components/sheets/sheet-context";
 import { formatMoney } from "@/lib/domain/money";
+import { netWorth } from "@/lib/domain/balances";
 import { useAppStore } from "@/lib/store/app-store";
 import { AccountCard } from "@/components/account-card";
 
+const NetWorthChart = dynamic(
+  () =>
+    import("@/components/charts/net-worth-chart").then(
+      (mod) => mod.NetWorthChart,
+    ),
+  { ssr: false, loading: () => <Skeleton className="h-36 w-full" /> },
+);
+
 export function AccountsView() {
   const accounts = useAppStore((state) => state.data.accounts);
+  const snapshots = useAppStore((state) => state.data.snapshots);
   const currency = useAppStore((state) => state.data.settings.currency);
   const sheets = useSheets();
 
@@ -119,6 +131,26 @@ export function AccountsView() {
               })}
             </div>
           </div>
+        )}
+      </section>
+
+      <section
+        aria-label="Net worth"
+        className="flex flex-col gap-1 rounded-2xl border border-border bg-card px-5 py-5 shadow-soft"
+      >
+        <p className="text-[13px] text-muted-foreground">Net worth</p>
+        <p className="text-2xl font-semibold tabular-nums">
+          {formatMoney(netWorth(accounts), currency)}
+        </p>
+        {snapshots.length >= 2 ? (
+          <div className="mt-2">
+            <NetWorthChart snapshots={snapshots} currency={currency} />
+          </div>
+        ) : (
+          <p className="text-[12px] text-muted-foreground">
+            Assets minus credit-card debt. A monthly trend chart appears here
+            as history accumulates.
+          </p>
         )}
       </section>
 

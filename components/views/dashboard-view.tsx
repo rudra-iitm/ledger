@@ -11,6 +11,7 @@ import {
   ReceiptText,
   RefreshCw,
   Target,
+  TrendingDown,
   TriangleAlert,
   Users,
   Wallet,
@@ -24,7 +25,8 @@ import { Progress } from "@/components/ui/progress";
 import { budgetSummary, categoryBudgetSummaries } from "@/lib/domain/budget";
 import { isInvestment, visibleInExpenseList } from "@/lib/domain/transactions";
 import { ShowInvestmentsToggle } from "@/components/fields/show-investments-toggle";
-import { currentMonth, formatDisplayMonth } from "@/lib/domain/dates";
+import { currentMonth, formatDisplayDate, formatDisplayMonth } from "@/lib/domain/dates";
+import { projectCashFlow } from "@/lib/domain/forecast";
 import { formatMoney } from "@/lib/domain/money";
 import { useAppStore } from "@/lib/store/app-store";
 import { cn } from "@/lib/utils";
@@ -34,10 +36,26 @@ export function DashboardView() {
   const budgets = useAppStore((state) => state.data.budgets);
   const monthlyBudget = budgets.monthlyBudget;
   const currency = useAppStore((state) => state.data.settings.currency);
+  const recurring = useAppStore((state) => state.data.recurring);
+  const subscriptions = useAppStore((state) => state.data.subscriptions);
+  const recurringInvestments = useAppStore(
+    (state) => state.data.recurringInvestments,
+  );
+  const accounts = useAppStore((state) => state.data.accounts);
   const showInvestmentsInExpenses = useAppStore(
     (state) => state.data.settings.showInvestmentsInExpenses,
   );
   const sheets = useSheets();
+  const forecast = projectCashFlow({
+    recurring,
+    subscriptions,
+    recurringInvestments,
+    accounts,
+  });
+  const hasSchedules =
+    recurring.some((item) => item.active) ||
+    subscriptions.some((item) => item.active) ||
+    recurringInvestments.some((item) => item.active);
 
   const month = currentMonth();
   const summary = budgetSummary(expenses, monthlyBudget, month);
@@ -137,6 +155,46 @@ export function DashboardView() {
       )}
 
       <InsightsStrip />
+
+      {hasSchedules && (
+        <Link
+          href="/calendar"
+          aria-label="Cash-flow forecast"
+          className={cn(
+            "flex items-center gap-3 rounded-2xl border px-4 py-3.5 outline-none transition-[background-color,transform] duration-200 ease-spring active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-ring",
+            forecast.firstNegative
+              ? "border-destructive/40 bg-destructive/10"
+              : "border-border bg-card shadow-soft hover:bg-accent/50",
+          )}
+        >
+          <TrendingDown
+            aria-hidden
+            className={cn(
+              "size-4 shrink-0",
+              forecast.firstNegative
+                ? "text-destructive"
+                : "text-muted-foreground",
+            )}
+          />
+          <span className="flex-1 text-[14px]">
+            {forecast.firstNegative ? (
+              <>
+                Projected to go negative on{" "}
+                <span className="font-medium">
+                  {formatDisplayDate(forecast.firstNegative.date)}
+                </span>
+              </>
+            ) : (
+              <>Next 90 days look covered</>
+            )}
+          </span>
+          <span className="text-right text-[13px] tabular-nums text-muted-foreground">
+            low {formatMoney(forecast.lowest.balance, currency)}
+            <br />
+            {formatDisplayDate(forecast.lowest.date)}
+          </span>
+        </Link>
+      )}
 
       <section aria-label="Shortcuts" className="grid grid-cols-2 gap-3">
         {[
