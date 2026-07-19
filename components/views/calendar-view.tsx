@@ -33,6 +33,7 @@ import {
 import {
   addDays,
   currentMonth,
+  formatDisplayDate,
   formatDisplayMonth,
   formatFullDate,
   nextMonth,
@@ -254,6 +255,28 @@ export function CalendarView() {
       )}
 
       {mode === "week" && (
+        <div className="flex flex-col gap-3">
+        <div className="flex items-center justify-between">
+          <button
+            type="button"
+            aria-label="Previous week"
+            onClick={() => setAnchor((d) => addDays(d, -7))}
+            className="flex size-9 items-center justify-center rounded-full border border-border outline-none hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <ChevronLeft aria-hidden className="size-4" />
+          </button>
+          <span className="text-[15px] font-medium">
+            {formatDisplayDate(week[0].date)} – {formatDisplayDate(week[6].date)}
+          </span>
+          <button
+            type="button"
+            aria-label="Next week"
+            onClick={() => setAnchor((d) => addDays(d, 7))}
+            className="flex size-9 items-center justify-center rounded-full border border-border outline-none hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <ChevronRight aria-hidden className="size-4" />
+          </button>
+        </div>
         <ul className="flex flex-col gap-2">
           {week.map((day) => {
             const entry = totalsMap.get(day.date);
@@ -273,6 +296,7 @@ export function CalendarView() {
             );
           })}
         </ul>
+        </div>
       )}
 
       {mode === "day" && (

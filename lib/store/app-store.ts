@@ -123,8 +123,11 @@ interface AppState {
   ) => void;
   deleteRecurring: (id: string) => void;
   addGroup: (name: string, memberNames: string[]) => void;
+  updateGroup: (id: string, patch: Partial<Pick<Group, "name">>) => void;
   deleteGroup: (id: string) => void;
   addMember: (groupId: string, name: string) => void;
+  /** False when the member is referenced by expenses/settlements or is you. */
+  removeMember: (groupId: string, memberId: string) => boolean;
   addGroupExpense: (
     groupId: string,
     expense: Omit<GroupExpense, "id" | "createdAt">,
@@ -811,10 +814,52 @@ export const useAppStore = create<AppState>((set, get) => {
         ];
       }),
 
+    updateGroup: (id, patch) => {
+      mutate("groups", ({ groups }) =>
+        groups.map((group) =>
+          group.id === id ? { ...group, ...patch } : group,
+        ),
+      );
+      void pushGroup(id);
+    },
+
     deleteGroup: (id) =>
       mutate("groups", ({ groups }) =>
         groups.filter((group) => group.id !== id),
       ),
+
+    removeMember: (groupId, memberId) => {
+      const group = get().data.groups.find((item) => item.id === groupId);
+      if (!group) return false;
+      const referenced =
+        group.selfMemberId === memberId ||
+        group.expenses.some(
+          (expense) =>
+            expense.paidBy === memberId ||
+            expense.splitAmong.includes(memberId) ||
+            expense.shares.some((share) => share.memberId === memberId),
+        ) ||
+        group.settlements.some(
+          (settlement) =>
+            settlement.from === memberId || settlement.to === memberId,
+        );
+      if (referenced) return false;
+      mutate("groups", ({ groups }) =>
+        groups.map(
+          (item): Group =>
+            item.id === groupId
+              ? {
+                  ...item,
+                  members: item.members.filter(
+                    (member) => member.id !== memberId,
+                  ),
+                }
+              : item,
+        ),
+      );
+      void pushGroup(groupId);
+      return true;
+    },
 
     addMember: (groupId, name) => {
       mutate("groups", ({ groups }) =>

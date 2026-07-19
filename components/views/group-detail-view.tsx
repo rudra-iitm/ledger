@@ -11,6 +11,7 @@ import {
   Plus,
   ReceiptText,
   RefreshCw,
+  Pencil,
   Share2,
   Trash2,
   UserPlus,
@@ -189,6 +190,10 @@ export function GroupDetailView() {
           Groups
         </button>
         <div className="flex items-center gap-1">
+          <Button variant="ghost" size="sm" onClick={() => sheets.openGroup(group)}>
+            <Pencil aria-hidden />
+            Edit
+          </Button>
           {groupSyncEnabled() && (
             <Button
               variant="ghost"

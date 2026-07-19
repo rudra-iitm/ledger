@@ -1,7 +1,8 @@
 "use client";
 
-import { CalendarClock } from "lucide-react";
+import { CalendarClock, Plus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { CategoryIcon } from "@/components/category-icon";
 import { EmptyState } from "@/components/empty-state";
 import { useSheets } from "@/components/sheets/sheet-context";
@@ -21,6 +22,12 @@ export function RecurringView() {
         icon={CalendarClock}
         title="No recurring expenses"
         description="Add rent, internet, or subscriptions and they will appear in your expenses automatically when due."
+        action={
+          <Button variant="secondary" onClick={() => sheets.openRecurring()}>
+            <Plus aria-hidden />
+            Add recurring
+          </Button>
+        }
       />
     );
   }

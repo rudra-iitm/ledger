@@ -129,7 +129,9 @@ export function SearchSheet({
                     type="button"
                     onClick={() => {
                       close();
-                      router.push("/expenses");
+                      router.push(
+                        `/expenses?category=${encodeURIComponent(category)}`,
+                      );
                     }}
                     className="rounded-full border border-border bg-card px-3.5 py-1.5 text-[13px] font-medium outline-none transition-colors hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring"
                   >

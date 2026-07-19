@@ -11,6 +11,13 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { BrandIcon } from "@/components/brand-icon";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 import { resolveBrand } from "@/lib/brands/registry";
 import type { Expense } from "@/lib/domain/types";
 import { formatDisplayDate } from "@/lib/domain/dates";
@@ -26,8 +33,10 @@ let closeActiveRow: (() => void) | null = null;
 export function ExpenseRow({ expense }: { expense: Expense }) {
   const sheets = useSheets();
   const currency = useAppStore((state) => state.data.settings.currency);
+  const accounts = useAppStore((state) => state.data.accounts);
   const deleteExpense = useAppStore((state) => state.deleteExpense);
 
+  const [detailsOpen, setDetailsOpen] = useState(false);
   const [offset, setOffset] = useState(0);
   const [dragging, setDragging] = useState(false);
   const offsetRef = useRef(0);
@@ -118,6 +127,9 @@ export function ExpenseRow({ expense }: { expense: Expense }) {
     else if (expense.type === "investment") sheets.openInvestment(undefined, expense);
     else if (!expense.type || expense.type === "expense")
       sheets.openExpense(expense);
+    // Transfers and card payments have no edit form — show details instead
+    // of silently ignoring the tap.
+    else setDetailsOpen(true);
   };
 
   const onEdit = () => {
@@ -240,6 +252,56 @@ export function ExpenseRow({ expense }: { expense: Expense }) {
           </span>
         </button>
       </div>
+
+      {(expense.type === "transfer" || expense.type === "cc_payment") && (
+        <Dialog open={detailsOpen} onOpenChange={setDetailsOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>
+                {expense.type === "transfer" ? "Transfer" : "Card payment"}
+              </DialogTitle>
+            </DialogHeader>
+            <dl className="flex flex-col gap-2 text-[14px]">
+              {[
+                ["Description", expense.description],
+                ["Amount", formatMoney(expense.amount, currency)],
+                ["Date", formatDisplayDate(expense.date)],
+                [
+                  "From",
+                  accounts.find((a) => a.id === expense.accountId)?.name ??
+                    "Unknown",
+                ],
+                [
+                  "To",
+                  accounts.find(
+                    (a) =>
+                      a.id ===
+                      (expense.type === "transfer"
+                        ? expense.transferAccountId
+                        : expense.paymentTargetId),
+                  )?.name ?? "Unknown",
+                ],
+                ...(expense.notes ? [["Notes", expense.notes]] : []),
+              ].map(([label, value]) => (
+                <div key={label} className="flex justify-between gap-4">
+                  <dt className="text-muted-foreground">{label}</dt>
+                  <dd className="text-right font-medium">{value}</dd>
+                </div>
+              ))}
+            </dl>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                setDetailsOpen(false);
+                onDelete();
+              }}
+            >
+              <Trash2 aria-hidden />
+              Delete
+            </Button>
+          </DialogContent>
+        </Dialog>
+      )}
     </li>
   );
 }

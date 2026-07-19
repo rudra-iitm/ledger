@@ -53,9 +53,13 @@ const ALL_SPACES = "__all_spaces__";
 
 interface ExpensesViewProps {
   scope?: "all" | "investments";
+  initialCategory?: Category | null;
 }
 
-export function ExpensesView({ scope = "all" }: ExpensesViewProps = {}) {
+export function ExpensesView({
+  scope = "all",
+  initialCategory = null,
+}: ExpensesViewProps = {}) {
   const investmentsOnly = scope === "investments";
   const noun = investmentsOnly ? "transaction" : "expense";
   const expenses = useAppStore((state) => state.data.expenses);
@@ -64,7 +68,7 @@ export function ExpensesView({ scope = "all" }: ExpensesViewProps = {}) {
   const spaces = useAppStore((state) => state.data.spaces);
 
   const [query, setQuery] = useState("");
-  const [category, setCategory] = useState<Category | null>(null);
+  const [category, setCategory] = useState<Category | null>(initialCategory);
   const [assetType, setAssetType] = useState<AssetType | null>(null);
   const [accountId, setAccountId] = useState(ALL_ACCOUNTS);
   const [spaceId, setSpaceId] = useState(ALL_SPACES);

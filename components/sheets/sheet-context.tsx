@@ -181,6 +181,7 @@ export function SheetProvider({ children }: { children: React.ReactNode }) {
       />
       <GroupSheet
         open={group.open}
+        group={group.data}
         onClose={() => setGroup((prev) => ({ ...prev, open: false }))}
       />
       <GroupExpenseSheet
