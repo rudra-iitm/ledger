@@ -16,6 +16,8 @@ export const TIME_PRESETS = [
   "thisMonth",
   "lastMonth",
   "thisYear",
+  "thisFY",
+  "lastFY",
   "all",
   "custom",
 ] as const;
@@ -36,9 +38,26 @@ export const TIME_PRESET_LABELS: Record<TimePreset, string> = {
   thisMonth: "This Month",
   lastMonth: "Last Month",
   thisYear: "This Year",
+  thisFY: "This FY (Apr–Mar)",
+  lastFY: "Last FY",
   all: "All Time",
   custom: "Custom Range",
 };
+
+/** Indian financial year (April 1 – March 31) containing the given date. */
+export function financialYearRange(
+  isoDate: string,
+  yearsBack = 0,
+): { start: string; end: string; label: string } {
+  const year = Number(isoDate.slice(0, 4));
+  const month = Number(isoDate.slice(5, 7));
+  const fyStartYear = (month >= 4 ? year : year - 1) - yearsBack;
+  return {
+    start: `${fyStartYear}-04-01`,
+    end: `${fyStartYear + 1}-03-31`,
+    label: `FY ${fyStartYear}-${String((fyStartYear + 1) % 100).padStart(2, "0")}`,
+  };
+}
 
 export function resolveRange(
   preset: TimePreset,
@@ -69,6 +88,14 @@ export function resolveRange(
     }
     case "thisYear":
       return { start: `${today.slice(0, 4)}-01-01`, end: today };
+    case "thisFY": {
+      const fy = financialYearRange(today);
+      return { start: fy.start, end: today };
+    }
+    case "lastFY": {
+      const fy = financialYearRange(today, 1);
+      return { start: fy.start, end: fy.end };
+    }
     case "custom":
       return custom;
     case "all":

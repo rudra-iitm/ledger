@@ -1,7 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { FileDown, FileText } from "lucide-react";
+import { FileDown, FileText, IndianRupee } from "lucide-react";
+import { toast } from "sonner";
 import {
   TimeRangePicker,
   type TimeFilterValue,
@@ -13,6 +14,7 @@ import { categoryBudgetSummaries } from "@/lib/domain/budget";
 import { resolveRange, TIME_PRESET_LABELS } from "@/lib/domain/time-ranges";
 import { formatMoney } from "@/lib/domain/money";
 import { buildReportData, expensesToCsv } from "@/lib/domain/reports";
+import { buildTaxPackCsv } from "@/lib/domain/tax";
 import { downloadCsv, downloadReportPdf } from "@/lib/export/files";
 import { useAppStore } from "@/lib/store/app-store";
 import { cn } from "@/lib/utils";
@@ -59,6 +61,12 @@ export function ReportsView() {
       buildReportData("Spending report", periodLabel, spendRows(filtered)),
       settings.currency,
     );
+
+  const exportTaxPack = (yearsBack: 0 | 1) => {
+    const pack = buildTaxPackCsv({ expenses, accounts, yearsBack });
+    downloadCsv(pack.fileName, pack.csv);
+    toast.success(`Tax pack for ${pack.label} downloaded`);
+  };
 
   return (
     <div className="flex flex-col gap-6">
@@ -163,6 +171,42 @@ export function ReportsView() {
           <FileText aria-hidden />
           Export PDF
         </Button>
+      </section>
+
+      <section
+        aria-label="Tax pack"
+        className="flex flex-col gap-3 rounded-2xl border border-border bg-card px-4 py-4 shadow-soft"
+      >
+        <div className="flex flex-col gap-1">
+          <h2 className="text-[15px] font-medium">Tax pack</h2>
+          <p className="text-[12px] leading-relaxed text-muted-foreground">
+            One CSV with everything your CA asks for: income, investment
+            transactions, deduction-tagged expenses, and category totals for
+            the financial year. Tag expenses{" "}
+            <span className="font-medium">#80c #80d #hra</span> to include them
+            in the deductions section.
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <Button
+            variant="secondary"
+            size="sm"
+            className="flex-1"
+            onClick={() => exportTaxPack(0)}
+          >
+            <IndianRupee aria-hidden />
+            This FY
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            className="flex-1"
+            onClick={() => exportTaxPack(1)}
+          >
+            <IndianRupee aria-hidden />
+            Last FY
+          </Button>
+        </div>
       </section>
     </div>
   );
