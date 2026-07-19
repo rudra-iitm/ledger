@@ -88,7 +88,7 @@ npm run dev        # dev server
 npm test           # vitest
 npm run typecheck  # tsc --noEmit
 npm run lint       # eslint
-npm run build      # static export to out/ (build dir .next-build)
+npm run build      # static export to out/
 ```
 
 CI runs typecheck, lint, and tests before every deploy.
