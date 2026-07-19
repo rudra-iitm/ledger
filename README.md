@@ -15,6 +15,10 @@ Manual entry is the fallback, not the workflow:
 - **Recurring detection** — repeating merchants are mined from history and suggested as subscriptions, bills, or EMIs with one-tap tracking.
 - **Cash-flow forecast** — every schedule (recurring, subscriptions, SIPs, card dues) projects your liquid balance 90 days out; the dashboard warns before you go negative.
 - **Net-worth history** — monthly snapshots captured automatically; trend chart on Accounts.
+- **Anomaly alerts** — the Inbox warns about likely double charges, subscription price hikes, and categories running far above their 3-month average; every alert shows its evidence and is dismissable.
+- **Financial health score** — six explainable components (savings rate, emergency fund, debt load, diversification, budget discipline, cash cushion) with the formula printed under each — no black boxes.
+- **Smart search** — "food last month" or "amazon this year" compiles into applied filters on the expense list.
+- **Budget suggestions** — one tap fills budgets from your last three months' per-category medians.
 - **Tax pack** — one CSV per financial year (Apr–Mar) with income, investment transactions, deduction-tagged expenses (#80c #80d #hra), and category totals.
 
 ## Everything else
@@ -32,7 +36,7 @@ Manual entry is the fallback, not the workflow:
 
 ## Tech
 
-Next.js 15 (static export) · TypeScript (strict) · Tailwind CSS v4 · shadcn-style Radix primitives · Zustand · Zod · Recharts · pdf.js · Sonner · Vaul · Octokit · jsPDF · Vitest (75 tests).
+Next.js 15 (static export) · TypeScript (strict) · Tailwind CSS v4 · shadcn-style Radix primitives · Zustand · Zod · Recharts · pdf.js · Sonner · Vaul · Octokit · jsPDF · Vitest (85 tests).
 
 ## Architecture
 

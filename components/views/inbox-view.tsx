@@ -30,6 +30,7 @@ import {
   mineRecurring,
   type RecurringSuggestion,
 } from "@/lib/domain/ingest/recurrence";
+import { detectAnomalies, type FinanceAlert } from "@/lib/domain/anomalies";
 import { formatMoney } from "@/lib/domain/money";
 import { useAppStore } from "@/lib/store/app-store";
 import { BrandIcon } from "@/components/brand-icon";
@@ -189,6 +190,35 @@ function ReviewCard({ draft }: { draft: DraftTransaction }) {
           Different — keep both
         </Button>
       </div>
+    </li>
+  );
+}
+
+function AlertCard({ alert }: { alert: FinanceAlert }) {
+  const dismissAlert = useAppStore((state) => state.dismissAlert);
+  return (
+    <li
+      className={
+        "flex items-start gap-3 rounded-2xl border px-4 py-3 " +
+        (alert.severity === "warn"
+          ? "border-amber-500/30 bg-amber-500/5"
+          : "border-border bg-card shadow-soft")
+      }
+    >
+      <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+        <span className="text-[15px] font-medium">{alert.title}</span>
+        <span className="text-[12px] leading-relaxed text-muted-foreground">
+          {alert.detail}
+        </span>
+      </div>
+      <button
+        type="button"
+        aria-label="Dismiss alert"
+        onClick={() => dismissAlert(alert.key)}
+        className="flex size-8 shrink-0 items-center justify-center rounded-full text-muted-foreground outline-none transition-colors hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+      >
+        <X aria-hidden className="size-4" />
+      </button>
     </li>
   );
 }
@@ -419,6 +449,10 @@ export function InboxView() {
   const dismissed = useAppStore(
     (state) => state.data.inbox.dismissedSuggestions,
   );
+  const dismissedAlerts = useAppStore(
+    (state) => state.data.inbox.dismissedAlerts,
+  );
+  const currency = useAppStore((state) => state.data.settings.currency);
   const expenses = useAppStore((state) => state.data.expenses);
   const subscriptions = useAppStore((state) => state.data.subscriptions);
   const recurringItems = useAppStore((state) => state.data.recurring);
@@ -442,6 +476,16 @@ export function InboxView() {
         dismissed,
       }),
     [expenses, subscriptions, recurringItems, dismissed],
+  );
+  const alerts = useMemo(
+    () =>
+      detectAnomalies({
+        expenses,
+        subscriptions,
+        currency,
+        dismissed: dismissedAlerts,
+      }),
+    [expenses, subscriptions, currency, dismissedAlerts],
   );
   const lastBatch = batches[0];
 
@@ -468,6 +512,18 @@ export function InboxView() {
       </div>
 
       <TabsContent value="review" className="flex flex-col gap-5">
+        {alerts.length > 0 && (
+          <section className="flex flex-col gap-2">
+            <h2 className="text-[13px] font-medium uppercase tracking-wide text-muted-foreground">
+              Heads up ({alerts.length})
+            </h2>
+            <ul className="flex flex-col gap-2">
+              {alerts.map((alert) => (
+                <AlertCard key={alert.key} alert={alert} />
+              ))}
+            </ul>
+          </section>
+        )}
         {suggestions.length > 0 && (
           <section className="flex flex-col gap-2">
             <h2 className="text-[13px] font-medium uppercase tracking-wide text-muted-foreground">

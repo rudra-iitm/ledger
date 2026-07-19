@@ -243,6 +243,7 @@ interface AppState {
   deleteRule: (id: string) => void;
   trackSuggestion: (suggestion: RecurringSuggestion) => void;
   dismissSuggestion: (key: string) => void;
+  dismissAlert: (key: string) => void;
   captureText: (text: string) => "created" | "duplicate" | "unparsed";
 }
 
@@ -1649,6 +1650,13 @@ export const useAppStore = create<AppState>((set, get) => {
               ...inbox,
               dismissedSuggestions: [...inbox.dismissedSuggestions, key],
             },
+      ),
+
+    dismissAlert: (key) =>
+      mutate("inbox", ({ inbox }) =>
+        inbox.dismissedAlerts.includes(key)
+          ? inbox
+          : { ...inbox, dismissedAlerts: [...inbox.dismissedAlerts, key] },
       ),
 
     captureText: (text) => {

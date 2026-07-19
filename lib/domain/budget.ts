@@ -82,3 +82,53 @@ export function categoryBudgetSummaries(
     })
     .sort((a, b) => b.progress - a.progress);
 }
+
+/**
+ * Budget suggestions from history: per-category median of the last three
+ * full months (categories seen in at least two of them), rounded up to a
+ * friendly ₹100 step. The overall suggestion is the sum of the categories.
+ */
+export function suggestBudgets(
+  expenses: Expense[],
+  now: Date = new Date(),
+): { monthlyBudget: number; categoryBudgets: Partial<Record<Category, number>> } {
+  const months: string[] = [];
+  let month = currentMonth(now);
+  for (let i = 0; i < 3; i += 1) {
+    month = previousMonthOf(month);
+    months.push(month);
+  }
+  const perCategory = new Map<Category, number[]>();
+  for (const row of expenses) {
+    if (!isSpend(row)) continue;
+    const rowMonth = monthOf(row.date);
+    if (!months.includes(rowMonth)) continue;
+    const totals = perCategory.get(row.category) ?? [];
+    const index = months.indexOf(rowMonth);
+    totals[index] = roundMoney((totals[index] ?? 0) + row.amount);
+    perCategory.set(row.category, totals);
+  }
+  const categoryBudgets: Partial<Record<Category, number>> = {};
+  let total = 0;
+  for (const [category, sparse] of perCategory) {
+    const totals = sparse.filter((value): value is number => Boolean(value));
+    if (totals.length < 2) continue;
+    const sorted = [...totals].sort((a, b) => a - b);
+    const median =
+      sorted.length % 2 === 1
+        ? sorted[(sorted.length - 1) / 2]
+        : (sorted[sorted.length / 2 - 1] + sorted[sorted.length / 2]) / 2;
+    const rounded = Math.ceil(median / 100) * 100;
+    if (rounded <= 0) continue;
+    categoryBudgets[category] = rounded;
+    total += rounded;
+  }
+  return { monthlyBudget: total, categoryBudgets };
+}
+
+function previousMonthOf(month: string): string {
+  const year = Number(month.slice(0, 4));
+  const monthNumber = Number(month.slice(5, 7));
+  const date = new Date(year, monthNumber - 2, 1);
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+}

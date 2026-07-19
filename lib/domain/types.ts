@@ -520,6 +520,7 @@ export const inboxSchema = z.object({
   drafts: z.array(draftTransactionSchema).default([]),
   batches: z.array(importBatchSchema).default([]),
   dismissedSuggestions: z.array(z.string()).default([]),
+  dismissedAlerts: z.array(z.string()).default([]),
 });
 export type InboxData = z.infer<typeof inboxSchema>;
 
@@ -527,6 +528,7 @@ export const DEFAULT_INBOX: InboxData = {
   drafts: [],
   batches: [],
   dismissedSuggestions: [],
+  dismissedAlerts: [],
 };
 
 export const ruleSchema = z.object({

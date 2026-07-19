@@ -2,8 +2,9 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Search, Users } from "lucide-react";
+import { ArrowRight, Search, Sparkles, Users } from "lucide-react";
 import { CategoryIcon } from "@/components/category-icon";
+import { interpretSearch } from "@/lib/domain/smart-search";
 import {
   Sheet,
   SheetContent,
@@ -52,6 +53,18 @@ export function SearchSheet({
     return groups.filter((group) => group.name.toLowerCase().includes(trimmed));
   }, [groups, trimmed]);
 
+  const smartQuery = useMemo(() => interpretSearch(query), [query]);
+
+  const openSmartQuery = () => {
+    if (!smartQuery) return;
+    const params = new URLSearchParams();
+    if (smartQuery.category) params.set("category", smartQuery.category);
+    if (smartQuery.preset) params.set("preset", smartQuery.preset);
+    if (smartQuery.query) params.set("q", smartQuery.query);
+    close();
+    router.push(`/expenses?${params.toString()}`);
+  };
+
   const noResults =
     trimmed.length > 0 &&
     matchingExpenses.length === 0 &&
@@ -82,6 +95,24 @@ export function SearchSheet({
         </div>
 
         <div className="mt-4 flex flex-col gap-5">
+          {smartQuery && (
+            <button
+              type="button"
+              onClick={openSmartQuery}
+              className="flex items-center gap-3 rounded-2xl border border-border bg-card px-4 py-3 text-left shadow-soft outline-none transition-colors hover:bg-accent/50 focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <Sparkles aria-hidden className="size-4 shrink-0 text-muted-foreground" />
+              <span className="flex min-w-0 flex-1 flex-col">
+                <span className="text-[14px] font-medium">
+                  Show expenses: {smartQuery.label}
+                </span>
+                <span className="text-[12px] text-muted-foreground">
+                  Opens the list with these filters applied
+                </span>
+              </span>
+              <ArrowRight aria-hidden className="size-4 shrink-0 text-muted-foreground" />
+            </button>
+          )}
           {matchingExpenses.length > 0 && (
             <section>
               <h3 className="mb-1 px-1 text-[13px] font-medium text-muted-foreground">

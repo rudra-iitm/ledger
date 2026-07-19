@@ -20,7 +20,7 @@ export interface CashFlowForecast {
   totalOut: number;
 }
 
-const LIQUID_TYPES: AccountType[] = [
+export const LIQUID_TYPES: AccountType[] = [
   "cash",
   "bank",
   "wallet",
@@ -30,7 +30,7 @@ const LIQUID_TYPES: AccountType[] = [
 
 const MAX_STEPS = 400;
 
-function isLiquid(account: Account | undefined): boolean {
+export function isLiquid(account: Account | undefined): boolean {
   // Unknown accounts default to liquid so scheduled items without an
   // account still show up in the projection.
   if (!account) return true;

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -11,6 +12,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import { suggestBudgets } from "@/lib/domain/budget";
 import { CATEGORIES, type Category } from "@/lib/domain/types";
 import { useAppStore } from "@/lib/store/app-store";
 
@@ -22,6 +24,7 @@ export function BudgetSheet({
   onClose: () => void;
 }) {
   const budgets = useAppStore((state) => state.data.budgets);
+  const expenses = useAppStore((state) => state.data.expenses);
   const currency = useAppStore((state) => state.data.settings.currency);
   const setMonthlyBudget = useAppStore((state) => state.setMonthlyBudget);
   const setCategoryBudget = useAppStore((state) => state.setCategoryBudget);
@@ -39,6 +42,24 @@ export function BudgetSheet({
     }
     setCategoryValues(next);
   }, [open, budgets]);
+
+  const applySuggestions = () => {
+    const suggestion = suggestBudgets(expenses);
+    const entries = Object.entries(suggestion.categoryBudgets);
+    if (entries.length === 0) {
+      toast("Not enough history yet — track a couple of months of spending first.");
+      return;
+    }
+    setOverall(String(suggestion.monthlyBudget));
+    setCategoryValues((current) => {
+      const next = { ...current };
+      for (const [category, value] of entries) next[category] = String(value);
+      return next;
+    });
+    toast.success(
+      `Suggested from your last 3 months (${entries.length} categories) — review and save`,
+    );
+  };
 
   const submit = () => {
     const parsedOverall = Number(overall);
@@ -75,6 +96,16 @@ export function BudgetSheet({
             submit();
           }}
         >
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={applySuggestions}
+          >
+            <Sparkles aria-hidden />
+            Suggest from my last 3 months
+          </Button>
+
           <div className="flex flex-col gap-2">
             <Label htmlFor="budget-overall">Monthly budget</Label>
             <div className="flex items-center gap-2 rounded-xl border border-input bg-card px-3.5">

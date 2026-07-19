@@ -32,7 +32,7 @@ import {
 import { filterExpenses, totalSpending } from "@/lib/domain/analytics";
 import { isInvestment, visibleInExpenseList } from "@/lib/domain/transactions";
 import { ShowInvestmentsToggle } from "@/components/fields/show-investments-toggle";
-import { resolveRange } from "@/lib/domain/time-ranges";
+import { resolveRange, type TimePreset } from "@/lib/domain/time-ranges";
 import { formatDisplayDate } from "@/lib/domain/dates";
 import { formatMoney } from "@/lib/domain/money";
 import { useAppStore } from "@/lib/store/app-store";
@@ -54,11 +54,15 @@ const ALL_SPACES = "__all_spaces__";
 interface ExpensesViewProps {
   scope?: "all" | "investments";
   initialCategory?: Category | null;
+  initialPreset?: TimePreset | null;
+  initialQuery?: string;
 }
 
 export function ExpensesView({
   scope = "all",
   initialCategory = null,
+  initialPreset = null,
+  initialQuery = "",
 }: ExpensesViewProps = {}) {
   const investmentsOnly = scope === "investments";
   const noun = investmentsOnly ? "transaction" : "expense";
@@ -67,7 +71,7 @@ export function ExpensesView({
   const accounts = useAppStore((state) => state.data.accounts);
   const spaces = useAppStore((state) => state.data.spaces);
 
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState(initialQuery);
   const [category, setCategory] = useState<Category | null>(initialCategory);
   const [assetType, setAssetType] = useState<AssetType | null>(null);
   const [accountId, setAccountId] = useState(ALL_ACCOUNTS);
@@ -75,7 +79,7 @@ export function ExpensesView({
   const [activeTags, setActiveTags] = useState<string[]>([]);
   const [sort, setSort] = useState<SortKey>("date-desc");
   const [time, setTime] = useState<TimeFilterValue>({
-    preset: "all",
+    preset: initialPreset ?? "all",
     custom: { start: null, end: null },
   });
   const [visible, setVisible] = useState(PAGE_SIZE);

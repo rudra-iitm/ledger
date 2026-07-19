@@ -6,6 +6,8 @@ import {
   CalendarCheck,
   ChevronRight,
   FileText,
+  HeartPulse,
+  Inbox,
   LayoutGrid,
   LineChart,
   ReceiptText,
@@ -198,6 +200,8 @@ export function DashboardView() {
 
       <section aria-label="Shortcuts" className="grid grid-cols-2 gap-3">
         {[
+          { href: "/health", label: "Health", icon: HeartPulse },
+          { href: "/inbox", label: "Inbox", icon: Inbox },
           { href: "/spaces", label: "Spaces", icon: LayoutGrid },
           { href: "/accounts", label: "Accounts", icon: Wallet },
           { href: "/investments", label: "Investments", icon: LineChart },
