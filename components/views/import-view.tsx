@@ -18,7 +18,9 @@ import {
   guessMapping,
   parseCsv,
   parseStatementCsv,
+  type StatementRow,
 } from "@/lib/domain/ingest/csv";
+import { parseStatementLines } from "@/lib/domain/ingest/pdf";
 import type { CsvMapping, ImportBatch } from "@/lib/domain/types";
 import { formatDisplayDate } from "@/lib/domain/dates";
 import { formatMoney } from "@/lib/domain/money";
@@ -54,6 +56,11 @@ export function ImportView() {
   const [accountId, setAccountId] = useState<string | undefined>(undefined);
   const [fileName, setFileName] = useState<string | null>(null);
   const [fileText, setFileText] = useState<string | null>(null);
+  const [pdfRows, setPdfRows] = useState<{
+    rows: StatementRow[];
+    skipped: number;
+  } | null>(null);
+  const [extracting, setExtracting] = useState(false);
   const [mapping, setMapping] = useState<CsvMapping>(DEFAULT_MAPPING);
   const [result, setResult] = useState<ImportBatch | null>(null);
 
@@ -63,8 +70,9 @@ export function ImportView() {
   );
   const headers = table[0] ?? [];
   const parsed = useMemo(
-    () => (fileText ? parseStatementCsv(fileText, mapping) : null),
-    [fileText, mapping],
+    () =>
+      pdfRows ?? (fileText ? parseStatementCsv(fileText, mapping) : null),
+    [fileText, mapping, pdfRows],
   );
 
   const columnLabel = (index: number) =>
@@ -73,6 +81,31 @@ export function ImportView() {
       : `Column ${index + 1}`;
 
   const onPickFile = async (file: File) => {
+    setResult(null);
+    if (file.type === "application/pdf" || /\.pdf$/i.test(file.name)) {
+      setExtracting(true);
+      try {
+        const { extractPdfLines } = await import("@/lib/pdf/extract");
+        const lines = await extractPdfLines(await file.arrayBuffer());
+        const extracted = parseStatementLines(lines);
+        if (extracted.rows.length === 0) {
+          toast.error(
+            "Couldn't find transactions in this PDF. If it's password-protected, unlock it first, or export CSV from your bank instead.",
+          );
+          return;
+        }
+        setFileName(file.name);
+        setFileText(null);
+        setPdfRows(extracted);
+      } catch {
+        toast.error(
+          "Couldn't read this PDF. Password-protected statements need to be unlocked first — or export CSV from your bank.",
+        );
+      } finally {
+        setExtracting(false);
+      }
+      return;
+    }
     const text = await file.text();
     const rows = parseCsv(text);
     if (rows.length === 0) {
@@ -80,8 +113,8 @@ export function ImportView() {
       return;
     }
     setFileName(file.name);
+    setPdfRows(null);
     setFileText(text);
-    setResult(null);
     const account = accounts.find((item) => item.id === accountId);
     const guessed = account?.csvMapping ?? guessMapping(rows[0] ?? []);
     setMapping(guessed ?? { ...DEFAULT_MAPPING });
@@ -100,7 +133,7 @@ export function ImportView() {
   const runImport = () => {
     if (!accountId || !parsed || parsed.rows.length === 0 || !fileName) return;
     const batch = importStatement(accountId, fileName, parsed.rows);
-    updateAccount(accountId, { csvMapping: mapping });
+    if (!pdfRows) updateAccount(accountId, { csvMapping: mapping });
     setResult(batch);
   };
 
@@ -158,6 +191,7 @@ export function ImportView() {
             onClick={() => {
               setFileName(null);
               setFileText(null);
+              setPdfRows(null);
               setResult(null);
             }}
           >
@@ -180,11 +214,11 @@ export function ImportView() {
       </div>
 
       <div className="flex flex-col gap-2">
-        <Label>Statement file (CSV)</Label>
+        <Label>Statement file (CSV or PDF)</Label>
         <input
           ref={fileInput}
           type="file"
-          accept=".csv,text/csv,text/plain"
+          accept=".csv,.pdf,text/csv,text/plain,application/pdf"
           className="hidden"
           onChange={(event) => {
             const file = event.target.files?.[0];
@@ -195,21 +229,30 @@ export function ImportView() {
         <Button
           variant="outline"
           className="justify-start"
-          disabled={!accountId}
+          disabled={!accountId || extracting}
           onClick={() => fileInput.current?.click()}
         >
           <FileUp aria-hidden />
-          {fileName ?? "Choose file…"}
+          {extracting ? "Reading PDF…" : (fileName ?? "Choose file…")}
         </Button>
         <p className="text-[12px] text-muted-foreground">
-          Download the CSV/Excel-as-CSV statement from your bank. Dates are read
-          day-first (DD/MM/YYYY). Re-importing the same statement is safe —
+          Bank or credit-card statements. CSV is most reliable; PDF text
+          statements work too (unlock password-protected ones first). Dates are
+          read day-first (DD/MM/YYYY). Re-importing the same statement is safe —
           already-imported rows are skipped.
         </p>
       </div>
 
-      {fileText && (
+      {pdfRows && (
+        <p className="rounded-xl border border-border bg-card px-3 py-2 text-[12px] text-muted-foreground">
+          Parsed from PDF — check the preview below before importing
+          {pdfRows.skipped > 0 ? ` (${pdfRows.skipped} lines skipped)` : ""}.
+        </p>
+      )}
+
+      {(fileText || pdfRows) && (
         <>
+          {fileText && (
           <section className="flex flex-col gap-3">
             <h2 className="text-[13px] font-medium uppercase tracking-wide text-muted-foreground">
               Column mapping
@@ -255,6 +298,7 @@ export function ImportView() {
               ))}
             </div>
           </section>
+          )}
 
           <section className="flex flex-col gap-2">
             <h2 className="text-[13px] font-medium uppercase tracking-wide text-muted-foreground">

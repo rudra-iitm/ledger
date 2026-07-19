@@ -301,3 +301,81 @@ describe("applyRulesToQuickExpense", () => {
     expect(result.expense).toEqual(input);
   });
 });
+
+describe("credit-card statement classification", () => {
+  const card: Account = {
+    ...DEFAULT_ACCOUNTS[1],
+    id: "acc-card",
+    name: "HDFC Credit Card",
+    type: "credit_card",
+  };
+
+  it("treats card credits as payments into the card, not income", () => {
+    const result = runImportPipeline(
+      baseInput(
+        [
+          {
+            date: "2026-07-10",
+            description: "NEFT PAYMENT RECEIVED, THANK YOU",
+            amount: 20000,
+            direction: "credit",
+          },
+        ],
+        { accountId: "acc-card", accounts: [...DEFAULT_ACCOUNTS, card] },
+      ),
+    );
+    const [draft] = result.drafts;
+    expect(draft.suggestedType).toBe("cc_payment");
+    expect(draft.transferAccountId).toBe("acc-card");
+    const expense = draftToExpense(draft, "e1", draft.createdAt);
+    expect(expense).toMatchObject({
+      type: "cc_payment",
+      paymentTargetId: "acc-card",
+      accountId: undefined,
+    });
+  });
+
+  it("keeps card debits as spending on the card", () => {
+    const result = runImportPipeline(
+      baseInput(
+        [
+          {
+            date: "2026-07-11",
+            description: "UPI-SWIGGY-swiggy@icici-999888777666",
+            amount: 620,
+            direction: "debit",
+          },
+        ],
+        { accountId: "acc-card", accounts: [...DEFAULT_ACCOUNTS, card] },
+      ),
+    );
+    expect(result.drafts[0]).toMatchObject({
+      suggestedType: "expense",
+      suggestedCategory: "Food",
+    });
+  });
+
+  it("detects the bank-side leg of a card bill payment by card name", () => {
+    const result = runImportPipeline(
+      baseInput(
+        [
+          {
+            date: "2026-07-12",
+            description: "IB BILLPAY HDFC CREDIT CARD AUTOPAY",
+            amount: 20000,
+            direction: "debit",
+          },
+        ],
+        { accounts: [...DEFAULT_ACCOUNTS, card] },
+      ),
+    );
+    const [draft] = result.drafts;
+    expect(draft.suggestedType).toBe("cc_payment");
+    expect(draft.transferAccountId).toBe("acc-card");
+    const expense = draftToExpense(draft, "e2", draft.createdAt);
+    expect(expense).toMatchObject({
+      accountId: "acc-bank",
+      paymentTargetId: "acc-card",
+    });
+  });
+});

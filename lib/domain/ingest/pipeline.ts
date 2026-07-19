@@ -51,9 +51,24 @@ function classify(
   row: StatementRow,
   decoded: ReturnType<typeof decodeNarration>,
   accounts: Account[],
+  target: Account | undefined,
 ): Classification {
   const brand = resolveBrand(row.description);
   const description = brand?.name ?? fallbackDescription(decoded, row.description);
+
+  // Credit-card statements: a credit is money INTO the card (payment or
+  // refund) — never income. Model it as a cc_payment with unknown source.
+  if (target?.type === "credit_card" && row.direction === "credit") {
+    return {
+      suggestedType: "cc_payment",
+      suggestedCategory: "Bills",
+      transferAccountId: target.id,
+      description:
+        decoded.channel === "refund"
+          ? `Refund — ${description}`
+          : `Payment received — ${target.name}`,
+    };
+  }
 
   if (row.direction === "credit") {
     const incomeCategory: IncomeCategory =
@@ -75,6 +90,27 @@ function classify(
           ? description
           : fallbackDescription(decoded, row.description),
     };
+  }
+
+  // Bank-side leg of a card bill payment: debit whose narration names one
+  // of the user's credit cards.
+  if (row.direction === "debit" && target?.type !== "credit_card") {
+    const lower = row.description.toLowerCase();
+    const card = accounts.find(
+      (account) =>
+        account.type === "credit_card" &&
+        !account.archived &&
+        lower.includes(account.name.toLowerCase()) &&
+        (/\bcard\b|\bcc\b/i.test(row.description) || account.name.length >= 8),
+    );
+    if (card) {
+      return {
+        suggestedType: "cc_payment",
+        suggestedCategory: "Bills",
+        transferAccountId: card.id,
+        description: `Payment · ${card.name}`,
+      };
+    }
   }
 
   if (decoded.channel === "atm") {
@@ -170,7 +206,12 @@ export function runImportPipeline(input: ImportInput): ImportResult {
     }
 
     const decoded = decodeNarration(row.description);
-    const classified = classify(row, decoded, accounts);
+    const classified = classify(
+      row,
+      decoded,
+      accounts,
+      accounts.find((account) => account.id === accountId),
+    );
     let draft: DraftTransaction = {
       id: input.createId(),
       batchId: input.batchId,
@@ -279,6 +320,12 @@ export function draftToExpense(
     case "cc_payment":
       return {
         ...base,
+        // A payment imported from the card's own statement has an unknown
+        // source; leaving accountId as the card would net the legs to zero.
+        accountId:
+          draft.transferAccountId === draft.accountId
+            ? undefined
+            : draft.accountId,
         type: "cc_payment",
         category: "Bills",
         paymentTargetId: draft.transferAccountId,
