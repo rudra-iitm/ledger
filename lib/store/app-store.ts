@@ -67,6 +67,7 @@ import {
   suggestionToSubscription,
   type RecurringSuggestion,
 } from "../domain/ingest/recurrence";
+import { resolveBrand } from "../brands/registry";
 
 export type AppStatus =
   | "booting"
@@ -640,6 +641,40 @@ export const useAppStore = create<AppState>((set, get) => {
             : item,
         ),
       }));
+
+      // Learn from the correction: recategorizing a recognizable merchant
+      // offers a one-tap rule so future captures classify themselves.
+      const newCategory = patch.category;
+      if (
+        current &&
+        (current.type ?? "expense") === "expense" &&
+        newCategory &&
+        newCategory !== current.category
+      ) {
+        const brand = resolveBrand(current.description);
+        const matchText = (brand?.name ?? current.description).trim();
+        if (matchText.length >= 3) {
+          const exists = get().data.rules.some(
+            (rule) =>
+              rule.match.text?.toLowerCase() === matchText.toLowerCase(),
+          );
+          if (!exists) {
+            toast(`Always file “${matchText}” under ${newCategory}?`, {
+              duration: 8000,
+              action: {
+                label: "Create rule",
+                onClick: () =>
+                  get().addRule({
+                    name: `${matchText} → ${newCategory}`,
+                    enabled: true,
+                    match: { text: matchText },
+                    actions: { category: newCategory, tags: [] },
+                  }),
+              },
+            });
+          }
+        }
+      }
     },
 
     deleteExpense: (id) => {

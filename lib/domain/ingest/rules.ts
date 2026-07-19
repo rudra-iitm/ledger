@@ -33,6 +33,45 @@ export function ruleMatches(rule: Rule, input: RuleInput): boolean {
   return true;
 }
 
+export interface QuickExpenseShape {
+  description: string;
+  amount: number;
+  category: DraftTransaction["suggestedCategory"];
+  accountId?: string;
+  spaceId?: string;
+  tags?: string[];
+}
+
+/**
+ * Applies rules to a manually captured expense whose category was inferred
+ * (quick add). Explicit sheet entries are deliberately left alone — a rule
+ * should correct guesses, not override the user's hand-picked category.
+ */
+export function applyRulesToQuickExpense<T extends QuickExpenseShape>(
+  expense: T,
+  rules: Rule[],
+): { expense: T; ruleId?: string } {
+  const rule = findMatchingRule(
+    {
+      description: expense.description,
+      rawNarration: expense.description,
+      accountId: expense.accountId ?? "",
+      direction: "debit",
+      amount: expense.amount,
+    },
+    rules,
+  );
+  if (!rule) return { expense };
+  const next: T = { ...expense };
+  if (rule.actions.renameTo) next.description = rule.actions.renameTo;
+  if (rule.actions.category) next.category = rule.actions.category;
+  if (rule.actions.spaceId) next.spaceId = rule.actions.spaceId;
+  if (rule.actions.tags.length > 0) {
+    next.tags = [...new Set([...(expense.tags ?? []), ...rule.actions.tags])];
+  }
+  return { expense: next, ruleId: rule.id };
+}
+
 /** Applies a rule's actions to a draft, recording which rule fired. */
 export function applyRule(
   draft: DraftTransaction,

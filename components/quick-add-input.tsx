@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { ArrowUp } from "lucide-react";
 import { toast } from "sonner";
 import { parseQuickAdd } from "@/lib/domain/quick-add";
+import { applyRulesToQuickExpense } from "@/lib/domain/ingest/rules";
 import { todayISO } from "@/lib/domain/dates";
 import { formatMoney } from "@/lib/domain/money";
 import { useAppStore } from "@/lib/store/app-store";
@@ -18,9 +19,18 @@ export function QuickAddInput({
 }) {
   const [value, setValue] = useState("");
   const addExpense = useAppStore((state) => state.addExpense);
+  const rules = useAppStore((state) => state.data.rules);
   const currency = useAppStore((state) => state.data.settings.currency);
 
-  const parsed = useMemo(() => parseQuickAdd(value), [value]);
+  // Rules refine the parser's guess (category, rename, tags) live.
+  const parsed = useMemo(() => {
+    const raw = parseQuickAdd(value);
+    if (!raw) return null;
+    return applyRulesToQuickExpense(
+      { ...raw, tags: [] as string[], spaceId: undefined as string | undefined },
+      rules,
+    ).expense;
+  }, [value, rules]);
 
   const submit = () => {
     if (!parsed) return;
@@ -29,6 +39,8 @@ export function QuickAddInput({
       amount: parsed.amount,
       type: "expense" as const,
       category: parsed.category,
+      tags: parsed.tags,
+      spaceId: parsed.spaceId,
       date: todayISO(),
     });
     toast.success(

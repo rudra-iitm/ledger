@@ -256,3 +256,48 @@ describe("draftToExpense", () => {
     });
   });
 });
+
+describe("applyRulesToQuickExpense", () => {
+  it("refines an inferred category, renames, and merges tags", async () => {
+    const { applyRulesToQuickExpense } = await import(
+      "@/lib/domain/ingest/rules"
+    );
+    const rule: Rule = {
+      id: "r-blinkit",
+      name: "Blinkit is groceries",
+      enabled: true,
+      match: { text: "blinkit" },
+      actions: { category: "Food", tags: ["groceries"], renameTo: "Blinkit" },
+      createdAt: "2026-01-01T00:00:00.000Z",
+    };
+    const { expense, ruleId } = applyRulesToQuickExpense(
+      {
+        description: "blinkit order",
+        amount: 420,
+        category: "Other" as const,
+        tags: ["home"],
+      },
+      [rule],
+    );
+    expect(ruleId).toBe("r-blinkit");
+    expect(expense).toMatchObject({
+      description: "Blinkit",
+      category: "Food",
+      tags: ["home", "groceries"],
+    });
+  });
+
+  it("leaves non-matching expenses untouched", async () => {
+    const { applyRulesToQuickExpense } = await import(
+      "@/lib/domain/ingest/rules"
+    );
+    const input = {
+      description: "chai",
+      amount: 20,
+      category: "Food" as const,
+    };
+    const result = applyRulesToQuickExpense(input, []);
+    expect(result.ruleId).toBeUndefined();
+    expect(result.expense).toEqual(input);
+  });
+});
