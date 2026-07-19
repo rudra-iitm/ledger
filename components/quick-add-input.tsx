@@ -3,9 +3,9 @@
 import { useMemo, useState } from "react";
 import { ArrowUp } from "lucide-react";
 import { toast } from "sonner";
-import { parseQuickAdd } from "@/lib/domain/quick-add";
+import { parseQuickAdd, resolveAccountHint } from "@/lib/domain/quick-add";
 import { applyRulesToQuickExpense } from "@/lib/domain/ingest/rules";
-import { todayISO } from "@/lib/domain/dates";
+import { addDays, formatDisplayDate, todayISO } from "@/lib/domain/dates";
 import { formatMoney } from "@/lib/domain/money";
 import { useAppStore } from "@/lib/store/app-store";
 import { Badge } from "@/components/ui/badge";
@@ -20,17 +20,24 @@ export function QuickAddInput({
   const [value, setValue] = useState("");
   const addExpense = useAppStore((state) => state.addExpense);
   const rules = useAppStore((state) => state.data.rules);
+  const accounts = useAppStore((state) => state.data.accounts);
   const currency = useAppStore((state) => state.data.settings.currency);
 
   // Rules refine the parser's guess (category, rename, tags) live.
   const parsed = useMemo(() => {
     const raw = parseQuickAdd(value);
     if (!raw) return null;
-    return applyRulesToQuickExpense(
-      { ...raw, tags: [] as string[], spaceId: undefined as string | undefined },
+    const account = resolveAccountHint(raw.accountHint, accounts);
+    const refined = applyRulesToQuickExpense(
+      {
+        ...raw,
+        accountId: account?.id,
+        spaceId: undefined as string | undefined,
+      },
       rules,
     ).expense;
-  }, [value, rules]);
+    return { ...refined, account, date: addDays(todayISO(), raw.dayOffset) };
+  }, [value, rules, accounts]);
 
   const submit = () => {
     if (!parsed) return;
@@ -40,8 +47,9 @@ export function QuickAddInput({
       type: "expense" as const,
       category: parsed.category,
       tags: parsed.tags,
+      accountId: parsed.accountId,
       spaceId: parsed.spaceId,
-      date: todayISO(),
+      date: parsed.date,
     });
     toast.success(
       `Added ${parsed.description} · ${formatMoney(parsed.amount, currency)}`,
@@ -85,6 +93,17 @@ export function QuickAddInput({
               {parsed.description} · {formatMoney(parsed.amount, currency)}
             </span>
             <Badge variant="outline">{parsed.category}</Badge>
+            {parsed.account && (
+              <Badge variant="outline">{parsed.account.name}</Badge>
+            )}
+            {parsed.date !== todayISO() && (
+              <Badge variant="outline">{formatDisplayDate(parsed.date)}</Badge>
+            )}
+            {parsed.tags.map((tag) => (
+              <Badge key={tag} variant="outline">
+                #{tag}
+              </Badge>
+            ))}
           </p>
         )}
       </div>

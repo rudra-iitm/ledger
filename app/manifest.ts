@@ -18,5 +18,11 @@ export default function manifest(): MetadataRoute.Manifest {
         type: "image/svg+xml",
       },
     ],
-  };
+    // Receive shared payment SMS/UPI text straight into the capture flow.
+    share_target: {
+      action: `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/capture/`,
+      method: "GET",
+      params: { title: "title", text: "text", url: "url" },
+    },
+  } as MetadataRoute.Manifest;
 }

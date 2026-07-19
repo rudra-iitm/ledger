@@ -472,7 +472,8 @@ export type DraftStatus = z.infer<typeof draftStatusSchema>;
 export const draftTransactionSchema = z.object({
   id: z.string().min(1),
   batchId: z.string().min(1),
-  accountId: z.string().min(1),
+  /** Absent for share-target/SMS captures where the account is unknown. */
+  accountId: z.string().min(1).optional(),
   date: isoDate,
   amount: z.number().positive(),
   direction: draftDirectionSchema,

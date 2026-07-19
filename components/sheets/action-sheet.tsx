@@ -1,7 +1,9 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import {
   CalendarClock,
+  ClipboardPaste,
   ReceiptText,
   ArrowRightLeft,
   TrendingUp,
@@ -47,6 +49,12 @@ const ACTIONS = [
     description: "Rent, bills, instalments",
     action: "recurring",
   },
+  {
+    icon: ClipboardPaste,
+    label: "Paste a payment SMS",
+    description: "Parsed into your Inbox — no typing",
+    action: "capture",
+  },
 ] as const;
 
 export function ActionSheet({
@@ -57,6 +65,7 @@ export function ActionSheet({
   onClose: () => void;
 }) {
   const sheets = useSheets();
+  const router = useRouter();
 
   const handle = (action: (typeof ACTIONS)[number]["action"]) => {
     if (action === "expense") sheets.openExpense();
@@ -64,6 +73,10 @@ export function ActionSheet({
     if (action === "investment") sheets.openInvestment();
     if (action === "recurring") sheets.openRecurring();
     if (action === "transfer") sheets.openTransfer();
+    if (action === "capture") {
+      onClose();
+      router.push("/capture");
+    }
   };
 
   return (

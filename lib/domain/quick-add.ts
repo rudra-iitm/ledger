@@ -4,6 +4,10 @@ export interface ParsedQuickAdd {
   description: string;
   amount: number;
   category: Category;
+  tags: string[];
+  accountHint?: string;
+  /** 0 = today, −1 = yesterday. */
+  dayOffset: number;
 }
 
 const CATEGORY_KEYWORDS: Record<string, Category> = {
@@ -94,15 +98,33 @@ export function parseQuickAdd(input: string): ParsedQuickAdd | null {
   if (!text) return null;
 
   let explicitCategory: Category | undefined;
+  const tags: string[] = [];
   text = text
-    .replace(/#(\w+)/g, (whole, tag: string) => {
+    .replace(/#([\w-]+)/g, (_whole, tag: string) => {
       const category = CATEGORY_BY_TAG.get(tag.toLowerCase());
-      if (category) {
-        explicitCategory = category;
-        return "";
-      }
-      return whole;
+      if (category) explicitCategory = category;
+      else tags.push(tag.toLowerCase());
+      return "";
     })
+    .trim();
+
+  // `@hdfc` targets an account (resolved by the caller); `yesterday`/
+  // `today` set the date without a picker.
+  let accountHint: string | undefined;
+  text = text
+    .replace(/@([\w-]+)/g, (_whole, hint: string) => {
+      accountHint = hint.toLowerCase();
+      return "";
+    })
+    .trim();
+
+  let dayOffset = 0;
+  text = text
+    .replace(/\b(yesterday|yday|today)\b/gi, (_whole, word: string) => {
+      dayOffset = /today/i.test(word) ? 0 : -1;
+      return "";
+    })
+    .replace(/\s+/g, " ")
     .trim();
 
   const amountMatch = text.match(
@@ -130,5 +152,23 @@ export function parseQuickAdd(input: string): ParsedQuickAdd | null {
     description,
     amount,
     category: explicitCategory ?? inferCategory(description),
+    tags,
+    accountHint,
+    dayOffset,
   };
+}
+
+/** Resolves an `@hint` against account names; null when nothing matches. */
+export function resolveAccountHint<T extends { id: string; name: string; archived: boolean }>(
+  hint: string | undefined,
+  accounts: T[],
+): T | null {
+  if (!hint) return null;
+  const needle = hint.toLowerCase();
+  return (
+    accounts.find(
+      (account) =>
+        !account.archived && account.name.toLowerCase().includes(needle),
+    ) ?? null
+  );
 }

@@ -68,6 +68,9 @@ import {
   type RecurringSuggestion,
 } from "../domain/ingest/recurrence";
 import { resolveBrand } from "../brands/registry";
+import { parseCaptureText } from "../domain/ingest/capture";
+import { computeLineHash } from "../domain/ingest/csv";
+import { applyRule, findMatchingRule } from "../domain/ingest/rules";
 
 export type AppStatus =
   | "booting"
@@ -237,6 +240,7 @@ interface AppState {
   deleteRule: (id: string) => void;
   trackSuggestion: (suggestion: RecurringSuggestion) => void;
   dismissSuggestion: (key: string) => void;
+  captureText: (text: string) => "created" | "duplicate" | "unparsed";
 }
 
 function pricesEndpoint(): string | null {
@@ -1601,6 +1605,73 @@ export const useAppStore = create<AppState>((set, get) => {
               dismissedSuggestions: [...inbox.dismissedSuggestions, key],
             },
       ),
+
+    captureText: (text) => {
+      const parsed = parseCaptureText(text);
+      if (!parsed) return "unparsed";
+      const state = get().data;
+      // Sharing the same SMS twice must not create a second draft; the
+      // hash also collides with a later statement import of the same ref.
+      const lineHash = computeLineHash("capture", {
+        date: parsed.date,
+        description: text.replace(/\s+/g, " ").trim(),
+        amount: parsed.amount,
+        direction: parsed.direction,
+        refNo: parsed.refNo,
+      });
+      const known =
+        state.inbox.drafts.some((draft) => draft.lineHash === lineHash) ||
+        state.expenses.some((expense) =>
+          expense.provenance?.some((source) => source.lineHash === lineHash),
+        );
+      if (known) return "duplicate";
+
+      const account = parsed.accountLast4
+        ? state.accounts.find(
+            (item) =>
+              !item.archived &&
+              item.accountNumber?.endsWith(parsed.accountLast4 ?? ""),
+          )
+        : undefined;
+
+      let draft: DraftTransaction = {
+        id: createId(),
+        batchId: "capture",
+        accountId: account?.id,
+        date: parsed.date,
+        amount: parsed.amount,
+        direction: parsed.direction,
+        description: parsed.description,
+        rawNarration: text.replace(/\s+/g, " ").trim(),
+        channel: parsed.channel,
+        refNo: parsed.refNo,
+        vpa: parsed.vpa,
+        suggestedType: parsed.suggestedType,
+        suggestedCategory: parsed.suggestedCategory,
+        suggestedIncomeCategory: parsed.suggestedIncomeCategory,
+        tags: [],
+        lineHash,
+        status: "pending",
+        createdAt: new Date().toISOString(),
+      };
+      const rule = findMatchingRule(
+        {
+          description: draft.description,
+          rawNarration: draft.rawNarration,
+          channel: draft.channel,
+          accountId: draft.accountId ?? "",
+          direction: draft.direction,
+          amount: draft.amount,
+        },
+        state.rules,
+      );
+      if (rule) draft = applyRule(draft, rule);
+      mutate("inbox", ({ inbox }) => ({
+        ...inbox,
+        drafts: [draft, ...inbox.drafts],
+      }));
+      return "created";
+    },
 
     exportBackup: () => buildBackup(get().data),
 
