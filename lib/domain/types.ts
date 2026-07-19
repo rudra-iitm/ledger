@@ -516,10 +516,15 @@ export type ImportBatch = z.infer<typeof importBatchSchema>;
 export const inboxSchema = z.object({
   drafts: z.array(draftTransactionSchema).default([]),
   batches: z.array(importBatchSchema).default([]),
+  dismissedSuggestions: z.array(z.string()).default([]),
 });
 export type InboxData = z.infer<typeof inboxSchema>;
 
-export const DEFAULT_INBOX: InboxData = { drafts: [], batches: [] };
+export const DEFAULT_INBOX: InboxData = {
+  drafts: [],
+  batches: [],
+  dismissedSuggestions: [],
+};
 
 export const ruleSchema = z.object({
   id: z.string().min(1),

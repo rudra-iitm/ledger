@@ -26,8 +26,14 @@ import { EmptyState } from "@/components/empty-state";
 import { CategoryIcon } from "@/components/category-icon";
 import { CATEGORIES, type Category, type DraftTransaction } from "@/lib/domain/types";
 import { formatDisplayDate } from "@/lib/domain/dates";
+import {
+  mineRecurring,
+  type RecurringSuggestion,
+} from "@/lib/domain/ingest/recurrence";
 import { formatMoney } from "@/lib/domain/money";
 import { useAppStore } from "@/lib/store/app-store";
+import { BrandIcon } from "@/components/brand-icon";
+import { resolveBrand } from "@/lib/brands/registry";
 
 const NONE = "__none__";
 
@@ -182,6 +188,64 @@ function ReviewCard({ draft }: { draft: DraftTransaction }) {
         >
           Different — keep both
         </Button>
+      </div>
+    </li>
+  );
+}
+
+const CADENCE_LABELS: Record<RecurringSuggestion["cadence"], string> = {
+  weekly: "weekly",
+  monthly: "monthly",
+  quarterly: "quarterly",
+  yearly: "yearly",
+};
+
+function SuggestionCard({ suggestion }: { suggestion: RecurringSuggestion }) {
+  const currency = useAppStore((state) => state.data.settings.currency);
+  const trackSuggestion = useAppStore((state) => state.trackSuggestion);
+  const dismissSuggestion = useAppStore((state) => state.dismissSuggestion);
+
+  return (
+    <li className="flex items-center gap-3 rounded-2xl border border-border bg-card px-4 py-3 shadow-soft">
+      <BrandIcon
+        brand={resolveBrand(suggestion.merchant)}
+        fallbackCategory={suggestion.category}
+        size="sm"
+      />
+      <div className="flex min-w-0 flex-1 flex-col">
+        <span className="truncate text-[15px] font-medium">
+          {suggestion.merchant}
+        </span>
+        <span className="text-[12px] text-muted-foreground">
+          {suggestion.kind === "emi"
+            ? "Looks like an EMI"
+            : suggestion.kind === "subscription"
+              ? "Looks like a subscription"
+              : "Repeating bill"}{" "}
+          · {formatMoney(suggestion.averageAmount, currency)}{" "}
+          {CADENCE_LABELS[suggestion.cadence]} · seen {suggestion.occurrences}×
+          · next ~{formatDisplayDate(suggestion.nextExpected)}
+        </span>
+      </div>
+      <div className="flex shrink-0 gap-1.5">
+        <Button
+          size="sm"
+          variant="secondary"
+          onClick={() => {
+            trackSuggestion(suggestion);
+            toast.success(`Tracking ${suggestion.merchant}`);
+          }}
+        >
+          Track
+        </Button>
+        <button
+          type="button"
+          aria-label="Dismiss suggestion"
+          onClick={() => dismissSuggestion(suggestion.key)}
+          className="flex size-8 items-center justify-center rounded-full text-muted-foreground outline-none transition-colors hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          <X aria-hidden className="size-4" />
+        </button>
       </div>
     </li>
   );
@@ -352,6 +416,12 @@ function RulesTab() {
 export function InboxView() {
   const drafts = useAppStore((state) => state.data.inbox.drafts);
   const batches = useAppStore((state) => state.data.inbox.batches);
+  const dismissed = useAppStore(
+    (state) => state.data.inbox.dismissedSuggestions,
+  );
+  const expenses = useAppStore((state) => state.data.expenses);
+  const subscriptions = useAppStore((state) => state.data.subscriptions);
+  const recurringItems = useAppStore((state) => state.data.recurring);
   const confirmPendingDrafts = useAppStore(
     (state) => state.confirmPendingDrafts,
   );
@@ -363,6 +433,15 @@ export function InboxView() {
   const pending = useMemo(
     () => drafts.filter((draft) => draft.status === "pending"),
     [drafts],
+  );
+  const suggestions = useMemo(
+    () =>
+      mineRecurring(expenses, {
+        subscriptions,
+        recurring: recurringItems,
+        dismissed,
+      }),
+    [expenses, subscriptions, recurringItems, dismissed],
   );
   const lastBatch = batches[0];
 
@@ -389,6 +468,18 @@ export function InboxView() {
       </div>
 
       <TabsContent value="review" className="flex flex-col gap-5">
+        {suggestions.length > 0 && (
+          <section className="flex flex-col gap-2">
+            <h2 className="text-[13px] font-medium uppercase tracking-wide text-muted-foreground">
+              Detected recurring payments ({suggestions.length})
+            </h2>
+            <ul className="flex flex-col gap-2">
+              {suggestions.map((suggestion) => (
+                <SuggestionCard key={suggestion.key} suggestion={suggestion} />
+              ))}
+            </ul>
+          </section>
+        )}
         {drafts.length === 0 ? (
           <EmptyState
             icon={Inbox}

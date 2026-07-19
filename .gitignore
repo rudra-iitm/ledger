@@ -44,3 +44,6 @@ worker/.dev.vars
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# production build dir (separate from dev .next)
+/.next-build/

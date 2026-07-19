@@ -61,6 +61,12 @@ import type {
 import { createId } from "../domain/id";
 import type { StatementRow } from "../domain/ingest/csv";
 import { draftToExpense, runImportPipeline } from "../domain/ingest/pipeline";
+import {
+  suggestionTarget,
+  suggestionToRecurring,
+  suggestionToSubscription,
+  type RecurringSuggestion,
+} from "../domain/ingest/recurrence";
 
 export type AppStatus =
   | "booting"
@@ -228,6 +234,8 @@ interface AppState {
   addRule: (rule: Omit<Rule, "id" | "createdAt">) => void;
   updateRule: (id: string, patch: Partial<Omit<Rule, "id">>) => void;
   deleteRule: (id: string) => void;
+  trackSuggestion: (suggestion: RecurringSuggestion) => void;
+  dismissSuggestion: (key: string) => void;
 }
 
 function pricesEndpoint(): string | null {
@@ -1429,6 +1437,7 @@ export const useAppStore = create<AppState>((set, get) => {
         }));
       }
       mutate("inbox", ({ inbox }) => ({
+        ...inbox,
         drafts: [...result.drafts, ...inbox.drafts],
         batches: [result.batch, ...inbox.batches].slice(0, 20),
       }));
@@ -1536,6 +1545,27 @@ export const useAppStore = create<AppState>((set, get) => {
 
     deleteRule: (id) =>
       mutate("rules", ({ rules }) => rules.filter((rule) => rule.id !== id)),
+
+    trackSuggestion: (suggestion) => {
+      if (suggestionTarget(suggestion) === "subscription") {
+        get().addSubscription(suggestionToSubscription(suggestion));
+      } else {
+        get().addRecurring(suggestionToRecurring(suggestion));
+      }
+      // The new subscription/template excludes this merchant by name on the
+      // next mining pass; dismissing the key covers renames too.
+      get().dismissSuggestion(suggestion.key);
+    },
+
+    dismissSuggestion: (key) =>
+      mutate("inbox", ({ inbox }) =>
+        inbox.dismissedSuggestions.includes(key)
+          ? inbox
+          : {
+              ...inbox,
+              dismissedSuggestions: [...inbox.dismissedSuggestions, key],
+            },
+      ),
 
     exportBackup: () => buildBackup(get().data),
 
