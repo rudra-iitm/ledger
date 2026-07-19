@@ -11,6 +11,7 @@ import {
   CloudAlert,
   FileText,
   House,
+  Inbox,
   LayoutGrid,
   LogOut,
   Plus,
@@ -46,6 +47,7 @@ function Header({ title }: { title: string }) {
   const session = useAppStore((state) => state.session);
   const syncStatus = useAppStore((state) => state.syncStatus);
   const signOut = useAppStore((state) => state.signOut);
+  const draftCount = useAppStore((state) => state.data.inbox.drafts.length);
   const sheets = useSheets();
 
   return (
@@ -96,6 +98,17 @@ function Header({ title }: { title: string }) {
               )}
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
+              <DropdownMenuItem asChild>
+                <Link href="/inbox">
+                  <Inbox aria-hidden />
+                  Inbox
+                  {draftCount > 0 && (
+                    <span className="ml-auto rounded-full bg-primary px-1.5 text-[11px] font-semibold tabular-nums text-primary-foreground">
+                      {draftCount}
+                    </span>
+                  )}
+                </Link>
+              </DropdownMenuItem>
               <DropdownMenuItem asChild>
                 <Link href="/spaces">
                   <LayoutGrid aria-hidden />

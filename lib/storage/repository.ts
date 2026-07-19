@@ -27,6 +27,11 @@ import {
   type Goal,
   recurringInvestmentsFileSchema,
   goalsFileSchema,
+  type InboxData,
+  type Rule,
+  inboxSchema,
+  rulesFileSchema,
+  DEFAULT_INBOX,
 } from "../domain/types";
 
 export interface LedgerData {
@@ -41,6 +46,8 @@ export interface LedgerData {
   lendBorrows: LendBorrow[];
   recurringInvestments: RecurringInvestment[];
   goals: Goal[];
+  inbox: InboxData;
+  rules: Rule[];
 }
 
 export const EMPTY_DATA: LedgerData = {
@@ -55,6 +62,8 @@ export const EMPTY_DATA: LedgerData = {
   lendBorrows: [],
   recurringInvestments: [],
   goals: [],
+  inbox: DEFAULT_INBOX,
+  rules: [],
 };
 
 export const FILE_SCHEMAS = {
@@ -69,6 +78,8 @@ export const FILE_SCHEMAS = {
   lendBorrows: lendBorrowsFileSchema,
   recurringInvestments: recurringInvestmentsFileSchema,
   goals: goalsFileSchema,
+  inbox: inboxSchema,
+  rules: rulesFileSchema,
 } satisfies Record<DataFile, z.ZodType>;
 
 export class LedgerRepository {
@@ -99,6 +110,8 @@ export class LedgerRepository {
       lendBorrows,
       recurringInvestments,
       goals,
+      inbox,
+      rules,
     ] = await Promise.all([
       this.readCollection("expenses", EMPTY_DATA.expenses),
       this.readCollection("recurring", EMPTY_DATA.recurring),
@@ -111,6 +124,8 @@ export class LedgerRepository {
       this.readCollection("lendBorrows", EMPTY_DATA.lendBorrows),
       this.readCollection("recurringInvestments", EMPTY_DATA.recurringInvestments),
       this.readCollection("goals", EMPTY_DATA.goals),
+      this.readCollection("inbox", EMPTY_DATA.inbox),
+      this.readCollection("rules", EMPTY_DATA.rules),
     ]);
     return {
       expenses,
@@ -124,6 +139,8 @@ export class LedgerRepository {
       lendBorrows,
       recurringInvestments,
       goals,
+      inbox,
+      rules,
     };
   }
 

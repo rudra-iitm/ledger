@@ -158,6 +158,26 @@ export const debitCardSchema = z.object({
 });
 export type DebitCard = z.infer<typeof debitCardSchema>;
 
+export const expenseSourceSchema = z.object({
+  kind: z.enum(["manual", "statement", "capture"]),
+  batchId: z.string().optional(),
+  lineHash: z.string().optional(),
+  refNo: z.string().optional(),
+});
+export type ExpenseSource = z.infer<typeof expenseSourceSchema>;
+
+export const csvMappingSchema = z.object({
+  dateCol: z.number().int().nonnegative(),
+  descCol: z.number().int().nonnegative(),
+  debitCol: z.number().int().nonnegative().optional(),
+  creditCol: z.number().int().nonnegative().optional(),
+  amountCol: z.number().int().nonnegative().optional(),
+  refCol: z.number().int().nonnegative().optional(),
+  balanceCol: z.number().int().nonnegative().optional(),
+  hasHeader: z.boolean().default(true),
+});
+export type CsvMapping = z.infer<typeof csvMappingSchema>;
+
 export const reconciliationSchema = z.object({
   id: z.string().min(1),
   date: isoDate,
@@ -198,6 +218,7 @@ export const accountSchema = z.object({
   branchName: z.string().optional(),
   bankAccountType: bankAccountTypeSchema.optional(),
   debitCards: z.array(debitCardSchema).default([]),
+  csvMapping: csvMappingSchema.optional(),
   createdAt: z.string().min(1),
 });
 export type Account = z.infer<typeof accountSchema>;
@@ -262,6 +283,7 @@ export const expenseSchema = z.object({
       }),
     )
     .optional(),
+  provenance: z.array(expenseSourceSchema).optional(),
 });
 export type Expense = z.infer<typeof expenseSchema>;
 
@@ -424,6 +446,89 @@ export type Goal = z.infer<typeof goalSchema>;
 
 export const recurringInvestmentsFileSchema = z.array(recurringInvestmentSchema);
 export const goalsFileSchema = z.array(goalSchema);
+
+export const draftDirectionSchema = z.enum(["debit", "credit"]);
+export type DraftDirection = z.infer<typeof draftDirectionSchema>;
+
+export const draftStatusSchema = z.enum(["pending", "review"]);
+export type DraftStatus = z.infer<typeof draftStatusSchema>;
+
+export const draftTransactionSchema = z.object({
+  id: z.string().min(1),
+  batchId: z.string().min(1),
+  accountId: z.string().min(1),
+  date: isoDate,
+  amount: z.number().positive(),
+  direction: draftDirectionSchema,
+  description: z.string().min(1),
+  rawNarration: z.string(),
+  channel: z.string().optional(),
+  refNo: z.string().optional(),
+  vpa: z.string().optional(),
+  suggestedType: z
+    .enum(["expense", "income", "transfer", "cc_payment"])
+    .default("expense"),
+  suggestedCategory: categorySchema.default("Other"),
+  suggestedIncomeCategory: incomeCategorySchema.optional(),
+  transferAccountId: z.string().optional(),
+  tags: z.array(z.string().min(1)).default([]),
+  notes: z.string().optional(),
+  spaceId: z.string().optional(),
+  lineHash: z.string().min(1),
+  status: draftStatusSchema.default("pending"),
+  matchExpenseId: z.string().optional(),
+  matchScore: z.number().optional(),
+  appliedRuleId: z.string().optional(),
+  createdAt: z.string().min(1),
+});
+export type DraftTransaction = z.infer<typeof draftTransactionSchema>;
+
+export const importBatchSchema = z.object({
+  id: z.string().min(1),
+  accountId: z.string().min(1),
+  fileName: z.string().min(1),
+  importedAt: z.string().min(1),
+  rowCount: z.number().int().nonnegative(),
+  newCount: z.number().int().nonnegative(),
+  autoMergedCount: z.number().int().nonnegative(),
+  reviewCount: z.number().int().nonnegative(),
+  duplicateCount: z.number().int().nonnegative(),
+  closingBalance: z.number().optional(),
+});
+export type ImportBatch = z.infer<typeof importBatchSchema>;
+
+export const inboxSchema = z.object({
+  drafts: z.array(draftTransactionSchema).default([]),
+  batches: z.array(importBatchSchema).default([]),
+});
+export type InboxData = z.infer<typeof inboxSchema>;
+
+export const DEFAULT_INBOX: InboxData = { drafts: [], batches: [] };
+
+export const ruleSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().min(1),
+  enabled: z.boolean().default(true),
+  match: z.object({
+    text: z.string().optional(),
+    channel: z.string().optional(),
+    accountId: z.string().optional(),
+    direction: draftDirectionSchema.optional(),
+    minAmount: z.number().optional(),
+    maxAmount: z.number().optional(),
+  }),
+  actions: z.object({
+    category: categorySchema.optional(),
+    incomeCategory: incomeCategorySchema.optional(),
+    tags: z.array(z.string().min(1)).default([]),
+    spaceId: z.string().optional(),
+    renameTo: z.string().optional(),
+  }),
+  createdAt: z.string().min(1),
+});
+export type Rule = z.infer<typeof ruleSchema>;
+
+export const rulesFileSchema = z.array(ruleSchema);
 
 export const DEFAULT_ACCOUNTS: Account[] = [
   {

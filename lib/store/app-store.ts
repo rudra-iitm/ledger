@@ -52,8 +52,13 @@ import type {
   LendBorrowRepayment,
   RecurringInvestment,
   Goal,
+  DraftTransaction,
+  ImportBatch,
+  Rule,
 } from "../domain/types";
 import { createId } from "../domain/id";
+import type { StatementRow } from "../domain/ingest/csv";
+import { draftToExpense, runImportPipeline } from "../domain/ingest/pipeline";
 
 export type AppStatus = "booting" | "unauthenticated" | "loading" | "ready";
 export type SyncStatus = "synced" | "saving" | "error";
@@ -198,6 +203,22 @@ interface AppState {
   exportBackup: () => string;
   importBackup: (json: string) => Promise<void>;
   refreshPrices: () => Promise<void>;
+  importStatement: (
+    accountId: string,
+    fileName: string,
+    rows: StatementRow[],
+  ) => ImportBatch;
+  updateDraft: (
+    id: string,
+    patch: Partial<Omit<DraftTransaction, "id" | "batchId" | "lineHash">>,
+  ) => void;
+  confirmDraft: (id: string) => void;
+  confirmPendingDrafts: () => number;
+  rejectDraft: (id: string) => void;
+  resolveDraftDuplicate: (id: string, action: "merge" | "keep") => void;
+  addRule: (rule: Omit<Rule, "id" | "createdAt">) => void;
+  updateRule: (id: string, patch: Partial<Omit<Rule, "id">>) => void;
+  deleteRule: (id: string) => void;
 }
 
 function pricesEndpoint(): string | null {
@@ -1290,6 +1311,146 @@ export const useAppStore = create<AppState>((set, get) => {
         /* prices are best-effort */
       }
     },
+
+    importStatement: (accountId, fileName, rows) => {
+      const state = get().data;
+      const result = runImportPipeline({
+        rows,
+        accountId,
+        fileName,
+        batchId: createId(),
+        now: new Date().toISOString(),
+        accounts: state.accounts,
+        expenses: state.expenses,
+        drafts: state.inbox.drafts,
+        rules: state.rules,
+        createId,
+      });
+      if (result.autoMerges.length > 0) {
+        const byExpense = new Map(
+          result.autoMerges.map((merge) => [merge.expenseId, merge.source]),
+        );
+        mutateLedger(({ expenses }) => ({
+          expenses: expenses.map((expense) => {
+            const source = byExpense.get(expense.id);
+            return source
+              ? {
+                  ...expense,
+                  accountId: expense.accountId ?? accountId,
+                  provenance: [...(expense.provenance ?? []), source],
+                }
+              : expense;
+          }),
+        }));
+      }
+      mutate("inbox", ({ inbox }) => ({
+        drafts: [...result.drafts, ...inbox.drafts],
+        batches: [result.batch, ...inbox.batches].slice(0, 20),
+      }));
+      return result.batch;
+    },
+
+    updateDraft: (id, patch) =>
+      mutate("inbox", ({ inbox }) => ({
+        ...inbox,
+        drafts: inbox.drafts.map((draft) =>
+          draft.id === id ? { ...draft, ...patch } : draft,
+        ),
+      })),
+
+    confirmDraft: (id) => {
+      const draft = get().data.inbox.drafts.find((item) => item.id === id);
+      if (!draft) return;
+      const expense = draftToExpense(draft, createId(), new Date().toISOString());
+      mutateLedger(({ expenses }) => ({ expenses: [expense, ...expenses] }));
+      mutate("inbox", ({ inbox }) => ({
+        ...inbox,
+        drafts: inbox.drafts.filter((item) => item.id !== id),
+      }));
+    },
+
+    confirmPendingDrafts: () => {
+      const pending = get().data.inbox.drafts.filter(
+        (draft) => draft.status === "pending",
+      );
+      if (pending.length === 0) return 0;
+      const now = new Date().toISOString();
+      const created = pending.map((draft) =>
+        draftToExpense(draft, createId(), now),
+      );
+      mutateLedger(({ expenses }) => ({ expenses: [...created, ...expenses] }));
+      const confirmedIds = new Set(pending.map((draft) => draft.id));
+      mutate("inbox", ({ inbox }) => ({
+        ...inbox,
+        drafts: inbox.drafts.filter((draft) => !confirmedIds.has(draft.id)),
+      }));
+      return pending.length;
+    },
+
+    rejectDraft: (id) =>
+      mutate("inbox", ({ inbox }) => ({
+        ...inbox,
+        drafts: inbox.drafts.filter((draft) => draft.id !== id),
+      })),
+
+    resolveDraftDuplicate: (id, action) => {
+      const draft = get().data.inbox.drafts.find((item) => item.id === id);
+      if (!draft) return;
+      if (action === "merge" && draft.matchExpenseId) {
+        const accountId = draft.accountId;
+        mutateLedger(({ expenses }) => ({
+          expenses: expenses.map((expense) =>
+            expense.id === draft.matchExpenseId
+              ? {
+                  ...expense,
+                  accountId: expense.accountId ?? accountId,
+                  provenance: [
+                    ...(expense.provenance ?? []),
+                    {
+                      kind: "statement" as const,
+                      batchId: draft.batchId,
+                      lineHash: draft.lineHash,
+                      refNo: draft.refNo,
+                    },
+                  ],
+                }
+              : expense,
+          ),
+        }));
+        mutate("inbox", ({ inbox }) => ({
+          ...inbox,
+          drafts: inbox.drafts.filter((item) => item.id !== id),
+        }));
+        return;
+      }
+      mutate("inbox", ({ inbox }) => ({
+        ...inbox,
+        drafts: inbox.drafts.map((item) =>
+          item.id === id
+            ? {
+                ...item,
+                status: "pending" as const,
+                matchExpenseId: undefined,
+                matchScore: undefined,
+              }
+            : item,
+        ),
+      }));
+    },
+
+    addRule: (rule) =>
+      mutate("rules", ({ rules }) => [
+        ...rules,
+        { ...rule, id: createId(), createdAt: new Date().toISOString() },
+      ]),
+
+    updateRule: (id, patch) =>
+      mutate("rules", ({ rules }) =>
+        rules.map((rule) => (rule.id === id ? { ...rule, ...patch } : rule)),
+      ),
+
+    deleteRule: (id) =>
+      mutate("rules", ({ rules }) => rules.filter((rule) => rule.id !== id)),
 
     exportBackup: () => buildBackup(get().data),
 

@@ -10,6 +10,8 @@ export const DATA_FILES = [
   "lendBorrows",
   "recurringInvestments",
   "goals",
+  "inbox",
+  "rules",
 ] as const;
 
 export type DataFile = (typeof DATA_FILES)[number];
