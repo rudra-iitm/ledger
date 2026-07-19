@@ -21,15 +21,48 @@ function isTextItem(item: unknown): item is { str: string; transform: number[] }
   );
 }
 
-export async function extractPdfLines(data: ArrayBuffer): Promise<string[]> {
+/** The document is encrypted: no password given, or the given one is wrong. */
+export class PdfPasswordError extends Error {
+  constructor(public readonly incorrect: boolean) {
+    super(incorrect ? "Incorrect PDF password" : "PDF requires a password");
+    this.name = "PdfPasswordError";
+  }
+}
+
+function isPasswordException(
+  error: unknown,
+): error is { name: string; code: number } {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "name" in error &&
+    (error as { name: string }).name === "PasswordException"
+  );
+}
+
+export async function extractPdfLines(
+  data: ArrayBuffer,
+  password?: string,
+): Promise<string[]> {
   const pdfjs = await import("pdfjs-dist");
   pdfjs.GlobalWorkerOptions.workerSrc = new URL(
     "pdfjs-dist/build/pdf.worker.min.mjs",
     import.meta.url,
   ).toString();
 
-  const task = pdfjs.getDocument({ data });
-  const doc = await task.promise;
+  // pdf.js transfers the buffer to its worker — hand it a copy so the
+  // caller can retry with another password on the same bytes.
+  const task = pdfjs.getDocument({ data: data.slice(0), password });
+  let doc: Awaited<typeof task.promise>;
+  try {
+    doc = await task.promise;
+  } catch (error) {
+    if (isPasswordException(error)) {
+      // pdf.js: code 1 = password needed, 2 = incorrect password.
+      throw new PdfPasswordError(error.code === 2 || Boolean(password));
+    }
+    throw error;
+  }
   const lines: string[] = [];
   try {
     for (let pageNumber = 1; pageNumber <= doc.numPages; pageNumber += 1) {

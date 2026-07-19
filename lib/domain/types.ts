@@ -219,6 +219,8 @@ export const accountSchema = z.object({
   bankAccountType: bankAccountTypeSchema.optional(),
   debitCards: z.array(debitCardSchema).default([]),
   csvMapping: csvMappingSchema.optional(),
+  /** Password this bank uses for its emailed/downloaded PDF statements. */
+  statementPassword: z.string().optional(),
   createdAt: z.string().min(1),
 });
 export type Account = z.infer<typeof accountSchema>;

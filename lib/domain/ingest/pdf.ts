@@ -1,4 +1,33 @@
+import type { Account } from "../types";
 import { parseStatementAmount, parseStatementDate, type StatementRow } from "./csv";
+
+export interface SavedStatementPassword {
+  accountId: string;
+  accountName: string;
+  password: string;
+}
+
+/**
+ * Statement passwords saved on any account, deduped by value with the
+ * given account's password (if any) listed first.
+ */
+export function collectStatementPasswords(
+  accounts: Account[],
+  preferredAccountId?: string,
+): SavedStatementPassword[] {
+  const seen = new Set<string>();
+  const ordered = [...accounts].sort((a, b) =>
+    a.id === preferredAccountId ? -1 : b.id === preferredAccountId ? 1 : 0,
+  );
+  const result: SavedStatementPassword[] = [];
+  for (const account of ordered) {
+    const password = account.statementPassword?.trim();
+    if (!password || seen.has(password)) continue;
+    seen.add(password);
+    result.push({ accountId: account.id, accountName: account.name, password });
+  }
+  return result;
+}
 
 /**
  * Heuristic parser for text lines extracted from PDF bank/card statements.

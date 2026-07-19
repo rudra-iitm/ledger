@@ -20,7 +20,19 @@ import {
   parseStatementCsv,
   type StatementRow,
 } from "@/lib/domain/ingest/csv";
-import { parseStatementLines } from "@/lib/domain/ingest/pdf";
+import {
+  collectStatementPasswords,
+  parseStatementLines,
+} from "@/lib/domain/ingest/pdf";
+import { extractPdfLines, PdfPasswordError } from "@/lib/pdf/extract";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import type { CsvMapping, ImportBatch } from "@/lib/domain/types";
 import { formatDisplayDate } from "@/lib/domain/dates";
 import { formatMoney } from "@/lib/domain/money";
@@ -61,6 +73,11 @@ export function ImportView() {
     skipped: number;
   } | null>(null);
   const [extracting, setExtracting] = useState(false);
+  const pendingPdf = useRef<{ file: File; buffer: ArrayBuffer } | null>(null);
+  const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
+  const [passwordValue, setPasswordValue] = useState("");
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [rememberPassword, setRememberPassword] = useState(true);
   const [mapping, setMapping] = useState<CsvMapping>(DEFAULT_MAPPING);
   const [result, setResult] = useState<ImportBatch | null>(null);
 
@@ -80,26 +97,52 @@ export function ImportView() {
       ? headers[index].trim()
       : `Column ${index + 1}`;
 
+  const completePdf = (file: File, lines: string[]): boolean => {
+    const extracted = parseStatementLines(lines);
+    if (extracted.rows.length === 0) {
+      toast.error(
+        "Couldn't find transactions in this PDF — it may be a scanned image. Export CSV from your bank instead.",
+      );
+      return false;
+    }
+    setFileName(file.name);
+    setFileText(null);
+    setPdfRows(extracted);
+    return true;
+  };
+
   const onPickFile = async (file: File) => {
     setResult(null);
     if (file.type === "application/pdf" || /\.pdf$/i.test(file.name)) {
       setExtracting(true);
       try {
-        const { extractPdfLines } = await import("@/lib/pdf/extract");
-        const lines = await extractPdfLines(await file.arrayBuffer());
-        const extracted = parseStatementLines(lines);
-        if (extracted.rows.length === 0) {
-          toast.error(
-            "Couldn't find transactions in this PDF. If it's password-protected, unlock it first, or export CSV from your bank instead.",
-          );
+        const buffer = await file.arrayBuffer();
+        try {
+          completePdf(file, await extractPdfLines(buffer));
           return;
+        } catch (error) {
+          if (!(error instanceof PdfPasswordError)) throw error;
         }
-        setFileName(file.name);
-        setFileText(null);
-        setPdfRows(extracted);
+        // Encrypted: quietly try every saved statement password first.
+        for (const saved of collectStatementPasswords(accounts, accountId)) {
+          try {
+            const lines = await extractPdfLines(buffer, saved.password);
+            if (completePdf(file, lines)) {
+              toast.success(`Unlocked with ${saved.accountName}'s saved password`);
+            }
+            return;
+          } catch (error) {
+            if (!(error instanceof PdfPasswordError)) throw error;
+          }
+        }
+        pendingPdf.current = { file, buffer };
+        setPasswordValue("");
+        setPasswordError(null);
+        setRememberPassword(true);
+        setPasswordDialogOpen(true);
       } catch {
         toast.error(
-          "Couldn't read this PDF. Password-protected statements need to be unlocked first — or export CSV from your bank.",
+          "Couldn't read this PDF. Try exporting CSV from your bank instead.",
         );
       } finally {
         setExtracting(false);
@@ -135,6 +178,32 @@ export function ImportView() {
     const batch = importStatement(accountId, fileName, parsed.rows);
     if (!pdfRows) updateAccount(accountId, { csvMapping: mapping });
     setResult(batch);
+  };
+
+  const submitPassword = async (password: string, fromSaved = false) => {
+    const pending = pendingPdf.current;
+    if (!pending || !password) return;
+    setExtracting(true);
+    setPasswordError(null);
+    try {
+      const lines = await extractPdfLines(pending.buffer, password);
+      const ok = completePdf(pending.file, lines);
+      setPasswordDialogOpen(false);
+      pendingPdf.current = null;
+      if (ok && !fromSaved && rememberPassword && accountId) {
+        updateAccount(accountId, { statementPassword: password });
+        toast.success("Password saved for this account");
+      }
+    } catch (error) {
+      if (error instanceof PdfPasswordError) {
+        setPasswordError("That password didn't unlock this file. Try again.");
+      } else {
+        setPasswordDialogOpen(false);
+        toast.error("Couldn't read this PDF after unlocking. Try CSV instead.");
+      }
+    } finally {
+      setExtracting(false);
+    }
   };
 
   if (result) {
@@ -350,6 +419,98 @@ export function ImportView() {
           </Button>
         </>
       )}
+
+      <Dialog
+        open={passwordDialogOpen}
+        onOpenChange={(open) => {
+          setPasswordDialogOpen(open);
+          if (!open) pendingPdf.current = null;
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Statement password</DialogTitle>
+            <DialogDescription>
+              {pendingPdf.current?.file.name ?? "This PDF"} is
+              password-protected. Banks usually use your PAN, date of birth, or
+              a combination — check the statement email.
+            </DialogDescription>
+          </DialogHeader>
+          <form
+            className="flex flex-col gap-4"
+            onSubmit={(event) => {
+              event.preventDefault();
+              void submitPassword(passwordValue.trim());
+            }}
+          >
+            {collectStatementPasswords(accounts, accountId).length > 0 && (
+              <div className="flex flex-col gap-2">
+                <Label>Saved passwords</Label>
+                <div className="flex flex-wrap gap-2">
+                  {collectStatementPasswords(accounts, accountId).map(
+                    (saved) => (
+                      <button
+                        key={saved.accountId}
+                        type="button"
+                        disabled={extracting}
+                        onClick={() => void submitPassword(saved.password, true)}
+                        className="rounded-full border border-border bg-card px-3.5 py-1.5 text-[13px] font-medium outline-none transition-colors hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+                      >
+                        {saved.accountName} · ••••
+                      </button>
+                    ),
+                  )}
+                </div>
+              </div>
+            )}
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="pdf-password">Password</Label>
+              <Input
+                id="pdf-password"
+                type="password"
+                autoComplete="off"
+                autoFocus
+                value={passwordValue}
+                onChange={(event) => {
+                  setPasswordValue(event.target.value);
+                  setPasswordError(null);
+                }}
+              />
+              {passwordError && (
+                <p className="text-[13px] text-destructive">{passwordError}</p>
+              )}
+            </div>
+            <button
+              type="button"
+              role="checkbox"
+              aria-checked={rememberPassword}
+              onClick={() => setRememberPassword((value) => !value)}
+              className="flex items-center gap-2.5 rounded-xl px-1 py-1 text-left text-[13px] text-muted-foreground outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <span
+                aria-hidden
+                className={
+                  "flex size-4.5 shrink-0 items-center justify-center rounded-md border transition-colors " +
+                  (rememberPassword
+                    ? "border-primary bg-primary text-primary-foreground"
+                    : "border-border")
+                }
+              >
+                {rememberPassword ? "✓" : ""}
+              </span>
+              Remember for{" "}
+              {accounts.find((account) => account.id === accountId)?.name ??
+                "this account"}
+            </button>
+            <Button
+              type="submit"
+              disabled={!passwordValue.trim() || extracting}
+            >
+              {extracting ? "Unlocking…" : "Unlock statement"}
+            </Button>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

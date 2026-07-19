@@ -59,3 +59,30 @@ describe("parseStatementLines", () => {
     expect(skipped).toBe(1);
   });
 });
+
+describe("collectStatementPasswords", () => {
+  const account = (id: string, name: string, statementPassword?: string) => ({
+    id, name, statementPassword,
+    type: "bank" as const, balance: 0, openingBalance: 0, icon: "🏦",
+    archived: false, debitCards: [], reconciliations: [],
+    createdAt: "2026-01-01T00:00:00.000Z",
+  });
+
+  it("dedupes by value and puts the preferred account first", async () => {
+    const { collectStatementPasswords } = await import(
+      "@/lib/domain/ingest/pdf"
+    );
+    const accounts = [
+      account("a1", "HDFC", "PAN1234"),
+      account("a2", "ICICI", "DOB0101"),
+      account("a3", "Axis", "PAN1234"), // duplicate value
+      account("a4", "Cash"), // none
+    ];
+    const result = collectStatementPasswords(accounts, "a2");
+    expect(result.map((entry) => entry.accountName)).toEqual(["ICICI", "HDFC"]);
+    expect(result.map((entry) => entry.password)).toEqual([
+      "DOB0101",
+      "PAN1234",
+    ]);
+  });
+});
