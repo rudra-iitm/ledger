@@ -116,10 +116,16 @@ export function LoginScreen() {
           Continue with GitHub
         </Button>
         {isGoogleConfigured() && (
-          <Button size="lg" variant="secondary" onClick={handleGoogle} disabled={busy}>
-            <GoogleIcon />
-            Continue with Google
-          </Button>
+          <div className="flex flex-col gap-1">
+            <Button size="lg" variant="secondary" onClick={handleGoogle} disabled={busy}>
+              <GoogleIcon />
+              Continue with Google
+            </Button>
+            <p className="px-1 text-center text-[11px] leading-relaxed text-muted-foreground">
+              Google sign-in is identity only — data stays on this device, not
+              in GitHub.
+            </p>
+          </div>
         )}
         <Button size="lg" variant="secondary" onClick={handleLocal} disabled={busy}>
           <Smartphone aria-hidden />

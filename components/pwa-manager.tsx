@@ -19,6 +19,13 @@ export function PwaManager() {
   }, []);
 
   useEffect(() => {
+    // Re-flush writes that failed while offline as soon as we're back.
+    const onOnline = () => useAppStore.getState().retrySync();
+    window.addEventListener("online", onOnline);
+    return () => window.removeEventListener("online", onOnline);
+  }, []);
+
+  useEffect(() => {
     if (status !== "ready") return;
     const events = upcomingEvents({
       recurring,

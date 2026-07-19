@@ -17,7 +17,7 @@ import { breakdownByCategory, totalSpending } from "./analytics";
 import { rankSpacesBySpending } from "./spaces";
 import { rankAccountsBySpending } from "./accounts";
 import { monthlyCost, totalMonthlyCost } from "./subscriptions";
-import { isSpend } from "./transactions";
+import { isIncome, isSpend } from "./transactions";
 
 export interface ReviewOverview {
   spent: number;
@@ -81,16 +81,23 @@ export function buildMonthlyReview(
   const money = (value: number) =>
     `${currency}${Math.round(value).toLocaleString("en-IN")}`;
 
-  const current = monthExpenses(expenses, month).filter(isSpend);
+  const monthRows = monthExpenses(expenses, month);
+  const current = monthRows.filter(isSpend);
   const prevMonth = previousMonth(month);
   const previous = monthExpenses(expenses, prevMonth).filter(isSpend);
 
   const spent = totalSpending(current);
   const remaining = roundMoney(monthlyBudget - spent);
+  const income = roundMoney(
+    monthRows.filter(isIncome).reduce((sum, row) => sum + row.amount, 0),
+  );
+  // Income-relative when income is tracked; budget-relative as a fallback.
   const savingsRate =
-    monthlyBudget > 0
-      ? Math.max(0, Math.round(((monthlyBudget - spent) / monthlyBudget) * 100))
-      : 0;
+    income > 0
+      ? Math.max(0, Math.round(((income - spent) / income) * 100))
+      : monthlyBudget > 0
+        ? Math.max(0, Math.round(((monthlyBudget - spent) / monthlyBudget) * 100))
+        : 0;
 
   const highlights: ReviewHighlight[] = [];
 

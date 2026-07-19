@@ -82,22 +82,42 @@ export const FILE_SCHEMAS = {
   rules: rulesFileSchema,
 } satisfies Record<DataFile, z.ZodType>;
 
+export interface LoadResult {
+  data: LedgerData;
+  /**
+   * Files whose stored content failed to parse or validate. Their in-memory
+   * value is the default fallback, and callers MUST NOT persist over them —
+   * writing would replace the user's real (recoverable) data with emptiness.
+   */
+  invalidFiles: DataFile[];
+}
+
 export class LedgerRepository {
   constructor(private adapter: StorageAdapter) {}
 
   private async readCollection<K extends DataFile>(
     file: K,
     fallback: LedgerData[K],
+    invalid: DataFile[],
   ): Promise<LedgerData[K]> {
     const raw = await this.adapter.readFile(file);
     if (raw === null) return fallback;
-    const migrated = migrate(file, JSON.parse(raw));
-    const parsed = FILE_SCHEMAS[file].safeParse(migrated);
-    if (!parsed.success) return fallback;
-    return parsed.data as LedgerData[K];
+    try {
+      const migrated = migrate(file, JSON.parse(raw));
+      const parsed = FILE_SCHEMAS[file].safeParse(migrated);
+      if (!parsed.success) {
+        invalid.push(file);
+        return fallback;
+      }
+      return parsed.data as LedgerData[K];
+    } catch {
+      invalid.push(file);
+      return fallback;
+    }
   }
 
-  async loadAll(): Promise<LedgerData> {
+  async loadAll(): Promise<LoadResult> {
+    const invalid: DataFile[] = [];
     const [
       expenses,
       recurring,
@@ -113,34 +133,41 @@ export class LedgerRepository {
       inbox,
       rules,
     ] = await Promise.all([
-      this.readCollection("expenses", EMPTY_DATA.expenses),
-      this.readCollection("recurring", EMPTY_DATA.recurring),
-      this.readCollection("groups", EMPTY_DATA.groups),
-      this.readCollection("budgets", EMPTY_DATA.budgets),
-      this.readCollection("settings", EMPTY_DATA.settings),
-      this.readCollection("accounts", EMPTY_DATA.accounts),
-      this.readCollection("spaces", EMPTY_DATA.spaces),
-      this.readCollection("subscriptions", EMPTY_DATA.subscriptions),
-      this.readCollection("lendBorrows", EMPTY_DATA.lendBorrows),
-      this.readCollection("recurringInvestments", EMPTY_DATA.recurringInvestments),
-      this.readCollection("goals", EMPTY_DATA.goals),
-      this.readCollection("inbox", EMPTY_DATA.inbox),
-      this.readCollection("rules", EMPTY_DATA.rules),
+      this.readCollection("expenses", EMPTY_DATA.expenses, invalid),
+      this.readCollection("recurring", EMPTY_DATA.recurring, invalid),
+      this.readCollection("groups", EMPTY_DATA.groups, invalid),
+      this.readCollection("budgets", EMPTY_DATA.budgets, invalid),
+      this.readCollection("settings", EMPTY_DATA.settings, invalid),
+      this.readCollection("accounts", EMPTY_DATA.accounts, invalid),
+      this.readCollection("spaces", EMPTY_DATA.spaces, invalid),
+      this.readCollection("subscriptions", EMPTY_DATA.subscriptions, invalid),
+      this.readCollection("lendBorrows", EMPTY_DATA.lendBorrows, invalid),
+      this.readCollection(
+        "recurringInvestments",
+        EMPTY_DATA.recurringInvestments,
+        invalid,
+      ),
+      this.readCollection("goals", EMPTY_DATA.goals, invalid),
+      this.readCollection("inbox", EMPTY_DATA.inbox, invalid),
+      this.readCollection("rules", EMPTY_DATA.rules, invalid),
     ]);
     return {
-      expenses,
-      recurring,
-      groups,
-      budgets,
-      settings,
-      accounts,
-      spaces,
-      subscriptions,
-      lendBorrows,
-      recurringInvestments,
-      goals,
-      inbox,
-      rules,
+      data: {
+        expenses,
+        recurring,
+        groups,
+        budgets,
+        settings,
+        accounts,
+        spaces,
+        subscriptions,
+        lendBorrows,
+        recurringInvestments,
+        goals,
+        inbox,
+        rules,
+      },
+      invalidFiles: invalid,
     };
   }
 

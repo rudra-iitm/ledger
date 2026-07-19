@@ -47,6 +47,7 @@ function Header({ title }: { title: string }) {
   const session = useAppStore((state) => state.session);
   const syncStatus = useAppStore((state) => state.syncStatus);
   const signOut = useAppStore((state) => state.signOut);
+  const retrySync = useAppStore((state) => state.retrySync);
   const draftCount = useAppStore((state) => state.data.inbox.drafts.length);
   const sheets = useSheets();
 
@@ -66,9 +67,15 @@ function Header({ title }: { title: string }) {
             />
           )}
           {syncStatus === "error" && (
-            <span role="status" aria-label="Sync failed" className="mr-1">
+            <button
+              type="button"
+              aria-label="Sync failed — tap to retry"
+              title="Sync failed — tap to retry"
+              onClick={() => retrySync()}
+              className="mr-1 flex size-8 items-center justify-center rounded-full outline-none transition-colors hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring"
+            >
               <CloudAlert aria-hidden className="size-4.5 text-destructive" />
-            </span>
+            </button>
           )}
           <button
             type="button"

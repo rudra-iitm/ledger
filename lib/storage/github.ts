@@ -24,28 +24,34 @@ export class GitHubStorageAdapter implements StorageAdapter {
   }
 
   private ensureRepo(): Promise<void> {
-    this.ready ??= (async () => {
-      const { data: user } = await this.octokit.rest.users.getAuthenticated();
-      this.owner = user.login;
-      try {
-        await this.octokit.rest.repos.get({
-          owner: this.owner,
-          repo: DATA_REPO,
-        });
-      } catch (error) {
-        if (isNotFound(error)) {
-          await this.octokit.rest.repos.createForAuthenticatedUser({
-            name: DATA_REPO,
-            private: true,
-            description: "Ledger app data — managed automatically",
-            auto_init: true,
-          });
-        } else {
-          throw error;
-        }
-      }
-    })();
+    // A transient failure must not stick: reset so the next call retries.
+    this.ready ??= this.bootstrap().catch((error) => {
+      this.ready = null;
+      throw error;
+    });
     return this.ready;
+  }
+
+  private async bootstrap(): Promise<void> {
+    const { data: user } = await this.octokit.rest.users.getAuthenticated();
+    this.owner = user.login;
+    try {
+      await this.octokit.rest.repos.get({
+        owner: this.owner,
+        repo: DATA_REPO,
+      });
+    } catch (error) {
+      if (isNotFound(error)) {
+        await this.octokit.rest.repos.createForAuthenticatedUser({
+          name: DATA_REPO,
+          private: true,
+          description: "Ledger app data — managed automatically",
+          auto_init: true,
+        });
+      } else {
+        throw error;
+      }
+    }
   }
 
   private pathFor(file: DataFile): string {

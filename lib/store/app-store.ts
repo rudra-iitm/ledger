@@ -1,6 +1,7 @@
 "use client";
 
 import { create } from "zustand";
+import { toast } from "sonner";
 import type { AuthSession } from "../auth/types";
 import { clearSession, loadSession, saveSession } from "../auth/session";
 import { DATA_FILES, type DataFile } from "../storage/adapter";
@@ -60,7 +61,12 @@ import { createId } from "../domain/id";
 import type { StatementRow } from "../domain/ingest/csv";
 import { draftToExpense, runImportPipeline } from "../domain/ingest/pipeline";
 
-export type AppStatus = "booting" | "unauthenticated" | "loading" | "ready";
+export type AppStatus =
+  | "booting"
+  | "unauthenticated"
+  | "loading"
+  | "ready"
+  | "offline";
 export type SyncStatus = "synced" | "saving" | "error";
 
 interface AppState {
@@ -69,6 +75,8 @@ interface AppState {
   data: LedgerData;
   syncStatus: SyncStatus;
   initialize: () => Promise<void>;
+  retryInitialize: () => Promise<void>;
+  retrySync: () => void;
   signIn: (session: AuthSession) => Promise<void>;
   signOut: () => void;
   addExpense: (
@@ -255,20 +263,43 @@ function buildAdapters(session: AuthSession): {
 }
 
 const pendingWrites = new Map<DataFile, Promise<void>>();
+/** Files whose last write failed — retried via retrySync / the online event. */
+const failedFiles = new Set<DataFile>();
+/** Files whose stored content failed validation on load — never overwritten. */
+const protectedFiles = new Set<DataFile>();
+
+function isAuthError(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "status" in error &&
+    (error as { status: number }).status === 401
+  );
+}
 
 function persist(file: DataFile, data: LedgerData, set: SetState): void {
   const repo = repository;
   if (!repo) return;
+  if (protectedFiles.has(file)) {
+    // The stored copy failed validation on load; writing would replace the
+    // user's real data with in-memory defaults. Keep it read-only.
+    set({ syncStatus: "error" });
+    return;
+  }
   const payload = data[file];
   const previous = pendingWrites.get(file) ?? Promise.resolve();
   const next = previous
     .then(() => repo.save(file, payload))
     .then(() => {
       if (pendingWrites.get(file) === next) pendingWrites.delete(file);
-      if (pendingWrites.size === 0) set({ syncStatus: "synced" });
+      failedFiles.delete(file);
+      if (pendingWrites.size === 0 && failedFiles.size === 0) {
+        set({ syncStatus: "synced" });
+      }
     })
     .catch(() => {
       if (pendingWrites.get(file) === next) pendingWrites.delete(file);
+      failedFiles.add(file);
       set({ syncStatus: "error" });
     });
   pendingWrites.set(file, next);
@@ -356,7 +387,15 @@ export const useAppStore = create<AppState>((set, get) => {
     const adapters = buildAdapters(session);
     repository = adapters.repository;
     attachmentStore = adapters.attachments;
-    const loaded = await repository.loadAll();
+    const { data: loaded, invalidFiles } = await repository.loadAll();
+    protectedFiles.clear();
+    for (const file of invalidFiles) protectedFiles.add(file);
+    if (invalidFiles.length > 0) {
+      toast.error(
+        `Some data could not be read and is protected from overwrites: ${invalidFiles.join(", ")}. Restore a backup or fix the stored file, then reload.`,
+        { duration: 10000 },
+      );
+    }
     const recurringResult = materializeRecurring(loaded.recurring);
     const subscriptionResult = materializeSubscriptions(loaded.subscriptions);
     const investmentResult = materializeInvestments(loaded.recurringInvestments);
@@ -444,12 +483,46 @@ export const useAppStore = create<AppState>((set, get) => {
       set({ session });
       try {
         await loadData(session);
-      } catch {
-        clearSession();
-        repository = null;
-        attachmentStore = null;
-        set({ status: "unauthenticated", session: null });
+      } catch (error) {
+        if (isAuthError(error)) {
+          // The token is actually rejected — only then drop the session.
+          clearSession();
+          repository = null;
+          attachmentStore = null;
+          set({ status: "unauthenticated", session: null });
+        } else {
+          // Network trouble (offline, GitHub down) must not sign the user out.
+          set({ status: "offline" });
+        }
       }
+    },
+
+    retryInitialize: async () => {
+      const session = get().session;
+      if (!session) {
+        set({ status: "unauthenticated" });
+        return;
+      }
+      try {
+        await loadData(session);
+      } catch (error) {
+        if (isAuthError(error)) {
+          clearSession();
+          repository = null;
+          attachmentStore = null;
+          set({ status: "unauthenticated", session: null });
+        } else {
+          set({ status: "offline" });
+        }
+      }
+    },
+
+    retrySync: () => {
+      const files = [...failedFiles];
+      if (files.length === 0) return;
+      failedFiles.clear();
+      const data = get().data;
+      for (const file of files) persist(file, data, set);
     },
 
     signIn: async (session) => {
@@ -463,6 +536,8 @@ export const useAppStore = create<AppState>((set, get) => {
       repository = null;
       attachmentStore = null;
       pendingWrites.clear();
+      failedFiles.clear();
+      protectedFiles.clear();
       set({
         session: null,
         status: "unauthenticated",
@@ -1458,6 +1533,9 @@ export const useAppStore = create<AppState>((set, get) => {
       const parsed = parseBackup(json);
       const accounts = recomputeBalances(parsed.accounts, parsed.expenses);
       const data: LedgerData = { ...parsed, accounts };
+      // A validated backup replaces everything — including files that were
+      // read-only because their stored copy failed validation.
+      protectedFiles.clear();
       set({ data });
       for (const file of DATA_FILES) persist(file, data, set);
     },

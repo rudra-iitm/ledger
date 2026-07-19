@@ -214,8 +214,13 @@ export function ExpenseSheet({
               placeholder="0"
               value={amount}
               onChange={(event) => {
-                const next = event.target.value.replace(/[^\d.]/g, "");
-                setAmount(next);
+                const cleaned = event.target.value.replace(/[^\d.]/g, "");
+                const [whole, ...fraction] = cleaned.split(".");
+                setAmount(
+                  fraction.length > 0
+                    ? `${whole}.${fraction.join("").slice(0, 2)}`
+                    : cleaned,
+                );
                 setError(null);
               }}
               className="w-40 bg-transparent text-center text-5xl font-semibold tracking-tight tabular-nums outline-none placeholder:text-muted-foreground/40"
