@@ -1,5 +1,5 @@
 /* Ledger service worker — offline app shell + due-bill reminders. */
-const VERSION = "ledger-v1";
+const VERSION = "ledger-v2";
 const SHELL_CACHE = `${VERSION}-shell`;
 const REMINDERS_KEY = "/__ledger_reminders__";
 
@@ -28,6 +28,8 @@ self.addEventListener("fetch", (event) => {
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
   if (url.pathname === REMINDERS_KEY) return;
+  // The update poller must always see the network — never cache it.
+  if (url.pathname.endsWith("/version.json")) return;
 
   if (request.mode === "navigate") {
     event.respondWith(networkFirst(request));

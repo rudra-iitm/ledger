@@ -37,6 +37,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useAppStore } from "@/lib/store/app-store";
+import { startUpdateWatch } from "@/lib/pwa/update";
 import { cn } from "@/lib/utils";
 
 const TABS = [
@@ -306,6 +307,8 @@ export function AppShell({
   title: string;
   children: React.ReactNode;
 }) {
+  useEffect(() => startUpdateWatch(), []);
+
   return (
     <AuthGate>
       <SheetProvider>

@@ -396,6 +396,10 @@ export function SettingsView() {
         <LogOut aria-hidden />
         Sign out
       </Button>
+
+      <p className="pb-2 text-center text-[12px] text-muted-foreground">
+        Build {process.env.NEXT_PUBLIC_BUILD_ID ?? "dev"}
+      </p>
     </div>
   );
 }

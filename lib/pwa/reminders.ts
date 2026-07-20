@@ -1,6 +1,7 @@
 import type { UpcomingEvent } from "@/lib/domain/upcoming";
 
-const REMINDERS_CACHE = "ledger-v1-reminders";
+// Must track VERSION in public/sw.js — the worker reads this same cache.
+const REMINDERS_CACHE = "ledger-v2-reminders";
 const REMINDERS_KEY = "/__ledger_reminders__";
 
 function basePath(): string {
