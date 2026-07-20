@@ -39,6 +39,7 @@ import {
 import { formatMoney } from "@/lib/domain/money";
 import { clearAiKey, getAiKey, setAiKey } from "@/lib/ai/gemini";
 import { AiActivityLog } from "@/components/ai-activity-log";
+import { AutonomyCard } from "@/components/agent/autonomy-card";
 import { Input } from "@/components/ui/input";
 import { useAppStore } from "@/lib/store/app-store";
 
@@ -304,12 +305,12 @@ export function SettingsView() {
           <div className="flex items-start gap-3">
             <Bot aria-hidden className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
             <p className="text-[12px] leading-relaxed text-muted-foreground">
-              Powers the copilot, insights, document scanning, monthly-review
-              summaries, smarter search and auto-categorization. Your key stays
-              in this browser only — never in your synced data or backups. Only
-              the minimum needed is sent per feature (aggregate stats or
-              merchant names, never balances or account numbers), and every
-              call is listed below.
+              Powers auto-categorization, the daily brief, insights, document
+              scanning, monthly-review summaries and smarter search. Your key
+              stays in this browser only — never in your synced data or
+              backups. Only the minimum needed is sent per feature (aggregate
+              stats or merchant names, never balances or account numbers), and
+              every call is listed below.
             </p>
           </div>
           {aiKeySet ? (
@@ -341,6 +342,8 @@ export function SettingsView() {
             </form>
           )}
         </div>
+
+        {aiKeySet && <AutonomyCard />}
 
         <div className="flex flex-col gap-3 rounded-2xl border border-border bg-card px-4 py-4 shadow-soft">
           <h3 className="text-[13px] font-medium">Activity</h3>

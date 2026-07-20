@@ -60,14 +60,15 @@ describe("categorizeJob", () => {
   });
 
   it("ignores rows it cannot act on when fingerprinting", () => {
-    // A confirmed row landing in the inbox must not trigger a fresh model call.
+    // A row parked in duplicate review is not categorisable, so its arrival
+    // must not drag the job back in for a fresh model call.
     const base = { ...EMPTY_DATA.inbox, drafts: [draft()] };
-    const withConfirmed = {
+    const withReview = {
       ...EMPTY_DATA.inbox,
-      drafts: [draft(), draft({ id: "d3", lineHash: "h3", status: "confirmed" })],
+      drafts: [draft(), draft({ id: "d3", lineHash: "h3", status: "review" })],
     };
-    expect(categorizeJob.fingerprint(context(base))).toBe(
-      categorizeJob.fingerprint(context(withConfirmed)),
+    expect(categorizeJob.fingerprint(context({ inbox: base }))).toBe(
+      categorizeJob.fingerprint(context({ inbox: withReview })),
     );
   });
 
