@@ -164,6 +164,25 @@ export function isKeyProblem(status: number, message: string): boolean {
   );
 }
 
+/**
+ * True when the model exists but has no capacity right now.
+ *
+ * Gemini answers an overloaded model with **503 UNAVAILABLE** ("this model is
+ * currently experiencing high demand"). That is a statement about *one model*,
+ * not about the API — which makes it a reason to walk the chain, exactly like
+ * a retired id, rather than to give up.
+ *
+ * Getting this wrong is expensive and was: a 503 on the head of a chain used
+ * to throw straight out of the model loop, so `gemini-flash-latest` being busy
+ * killed the balanced and vision tiers outright while `gemini-flash-lite-latest`
+ * sat unused two lines below it in the same chain. The retry in `client.ts`
+ * then re-ran the identical request three times into the same busy model.
+ */
+export function isOverloaded(status: number, message: string): boolean {
+  if (status === 503) return true;
+  return status >= 500 && /overload|high demand|unavailable|try again later/i.test(message);
+}
+
 /** True when the failure looks like an unrecognised generationConfig field. */
 function isBadArgument(status: number, message: string): boolean {
   if (isKeyProblem(status, message)) return false;
@@ -286,6 +305,15 @@ async function attempt(
 ): Promise<{ body: GeminiResponse; model: string }> {
   const chain = chainFor(request.tier);
   let lastError: AiError | null = null;
+  /**
+   * Set when we walked past a model that was merely *busy*.
+   *
+   * `rememberResolved` exists for permanent facts — "Google retired this id
+   * for my key" — so pinning a fallback because the preferred model had a
+   * busy minute would quietly demote the whole tier to a weaker model
+   * forever. A transient skip is not evidence about the chain's order.
+   */
+  let skippedBusyModel = false;
 
   for (const spec of chain) {
     for (let degrade = 0; degrade <= 3; degrade += 1) {
@@ -297,7 +325,7 @@ async function attempt(
         false,
       );
       if (response.ok) {
-        rememberResolved(request.tier, spec.id);
+        if (!skippedBusyModel) rememberResolved(request.tier, spec.id);
         return { body: (await response.json()) as GeminiResponse, model: spec.id };
       }
 
@@ -308,6 +336,17 @@ async function attempt(
           "model-missing",
         );
         break; // next model, not next degradation
+      }
+      if (isOverloaded(response.status, message)) {
+        // Retryable, so if the whole chain is busy `client.ts` still backs off
+        // and tries again later rather than surfacing a dead end.
+        lastError = new AiError(
+          "Gemini is having trouble — retrying.",
+          "response",
+          true,
+        );
+        skippedBusyModel = true;
+        break; // next model: a different one may well have capacity
       }
       if (isBadArgument(response.status, message) && degrade < 3) {
         continue; // shed a generation field and try the same model again

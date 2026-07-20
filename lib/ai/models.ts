@@ -31,6 +31,15 @@ export interface ModelSpec {
  * `gemini-2.5-flash` failed here before. The alias tracks Google's current
  * model of that class, and the pinned ids behind it are the safety net for
  * the day an alias is the thing that disappears.
+ *
+ * The safety net only works if it is alive. Verified against the live API on
+ * 20 Jul 2026: `gemini-2.5-flash` now answers
+ *   404 "no longer available to new users"
+ * so it was a dead fallback sitting in two chains, costing a wasted probe per
+ * new user and protecting nobody. Replaced with `gemini-3.5-flash`, which
+ * answered 503 (busy — i.e. it exists and serves this account). Re-check these
+ * pins when a Gemini generation ships; a fallback nobody has called in a year
+ * is a guess, not a net.
  */
 export const MODEL_CHAINS: Record<ModelTier, ModelSpec[]> = {
   /** High-volume, low-stakes classification: categorization, merchant naming. */
@@ -39,22 +48,22 @@ export const MODEL_CHAINS: Record<ModelTier, ModelSpec[]> = {
     { id: "gemini-2.5-flash-lite", inputPer1M: 0.1, outputPer1M: 0.4 },
     { id: "gemini-flash-latest", inputPer1M: 0.3, outputPer1M: 2.5 },
   ],
-  /** Everyday reasoning: the copilot, query compilation, narration. */
+  /** Everyday reasoning: query compilation, narration, the daily brief. */
   balanced: [
     { id: "gemini-flash-latest", inputPer1M: 0.3, outputPer1M: 2.5 },
-    { id: "gemini-2.5-flash", inputPer1M: 0.3, outputPer1M: 2.5 },
+    { id: "gemini-3.5-flash", inputPer1M: 0.3, outputPer1M: 2.5 },
     { id: "gemini-flash-lite-latest", inputPer1M: 0.1, outputPer1M: 0.4 },
   ],
   /** Multi-step advice where being wrong is expensive: goals, tax, portfolio. */
   deep: [
     { id: "gemini-pro-latest", inputPer1M: 1.25, outputPer1M: 10 },
-    { id: "gemini-2.5-pro", inputPer1M: 1.25, outputPer1M: 10 },
+    { id: "gemini-3-pro-preview", inputPer1M: 1.25, outputPer1M: 10 },
     { id: "gemini-flash-latest", inputPer1M: 0.3, outputPer1M: 2.5 },
   ],
   /** Documents: receipts, invoices, payslips, statement scans. */
   vision: [
     { id: "gemini-flash-latest", inputPer1M: 0.3, outputPer1M: 2.5 },
-    { id: "gemini-2.5-flash", inputPer1M: 0.3, outputPer1M: 2.5 },
+    { id: "gemini-3.5-flash", inputPer1M: 0.3, outputPer1M: 2.5 },
     { id: "gemini-pro-latest", inputPer1M: 1.25, outputPer1M: 10 },
   ],
 };
