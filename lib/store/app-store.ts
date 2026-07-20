@@ -71,6 +71,11 @@ import { resolveBrand } from "../brands/registry";
 import { parseCaptureText } from "../domain/ingest/capture";
 import { computeLineHash } from "../domain/ingest/csv";
 import { applyRule, findMatchingRule } from "../domain/ingest/rules";
+import {
+  documentLineHash,
+  documentToDraft,
+  type DocumentCapture,
+} from "../domain/ingest/document";
 
 export type AppStatus =
   | "booting"
@@ -245,6 +250,10 @@ interface AppState {
   dismissSuggestion: (key: string) => void;
   dismissAlert: (key: string) => void;
   captureText: (text: string) => "created" | "duplicate" | "unparsed";
+  captureDocument: (
+    capture: DocumentCapture,
+    accountId?: string,
+  ) => "created" | "duplicate";
 }
 
 function pricesEndpoint(): string | null {
@@ -1707,6 +1716,43 @@ export const useAppStore = create<AppState>((set, get) => {
         status: "pending",
         createdAt: new Date().toISOString(),
       };
+      const rule = findMatchingRule(
+        {
+          description: draft.description,
+          rawNarration: draft.rawNarration,
+          channel: draft.channel,
+          accountId: draft.accountId ?? "",
+          direction: draft.direction,
+          amount: draft.amount,
+        },
+        state.rules,
+      );
+      if (rule) draft = applyRule(draft, rule);
+      mutate("inbox", ({ inbox }) => ({
+        ...inbox,
+        drafts: [draft, ...inbox.drafts],
+      }));
+      return "created";
+    },
+
+    captureDocument: (capture, accountId) => {
+      const state = get().data;
+      const lineHash = documentLineHash(capture);
+      // Same dedup contract as a shared SMS: scanning a receipt twice, or
+      // scanning one whose purchase later lands on a statement, is a no-op.
+      const known =
+        state.inbox.drafts.some((draft) => draft.lineHash === lineHash) ||
+        state.expenses.some((expense) =>
+          expense.provenance?.some((source) => source.lineHash === lineHash),
+        );
+      if (known) return "duplicate";
+
+      let draft = documentToDraft(
+        capture,
+        createId(),
+        new Date().toISOString(),
+        accountId,
+      );
       const rule = findMatchingRule(
         {
           description: draft.description,

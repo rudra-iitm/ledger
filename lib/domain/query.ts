@@ -33,7 +33,6 @@ import {
   TIME_PRESET_LABELS,
   TIME_PRESETS,
   type DateRange,
-  type TimePreset,
 } from "./time-ranges";
 import { incomeRows, spendRows } from "./transactions";
 

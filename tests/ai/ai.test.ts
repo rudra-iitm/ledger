@@ -4,6 +4,7 @@ import {
   buildCategorizePrompt,
   buildFilterPrompt,
   buildReviewPrompt,
+  reviewPrompt,
 } from "@/lib/ai/prompts";
 import { buildMonthlyReview } from "@/lib/domain/review";
 import { DEFAULT_ACCOUNTS } from "@/lib/domain/types";
@@ -66,7 +67,9 @@ describe("prompt builders", () => {
     );
     const prompt = buildReviewPrompt(review, "₹");
     expect(prompt).toContain('"spent":4000');
-    expect(prompt).toContain("Do not invent numbers");
+    // The no-inventing rule now lives in the template's system instruction,
+    // where it applies to every narrating prompt rather than just this one.
+    expect(reviewPrompt.system).toContain("Never invent");
   });
 });
 

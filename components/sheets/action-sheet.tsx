@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import {
   CalendarClock,
   ClipboardPaste,
+  Camera,
   ReceiptText,
   ArrowRightLeft,
   TrendingUp,
@@ -50,6 +51,12 @@ const ACTIONS = [
     action: "recurring",
   },
   {
+    icon: Camera,
+    label: "Scan a receipt",
+    description: "Photo or PDF — read into your Inbox",
+    action: "scan",
+  },
+  {
     icon: ClipboardPaste,
     label: "Paste a payment SMS",
     description: "Parsed into your Inbox — no typing",
@@ -76,6 +83,10 @@ export function ActionSheet({
     if (action === "capture") {
       onClose();
       router.push("/capture");
+    }
+    if (action === "scan") {
+      onClose();
+      router.push("/scan");
     }
   };
 

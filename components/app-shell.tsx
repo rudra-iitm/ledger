@@ -8,6 +8,7 @@ import {
   Bot,
   CalendarClock,
   CalendarDays,
+  Camera,
   CircleUserRound,
   CloudAlert,
   FileText,
@@ -117,6 +118,12 @@ function Header({ title }: { title: string }) {
                 <Link href="/insights">
                   <Lightbulb aria-hidden />
                   Insights
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href="/scan">
+                  <Camera aria-hidden />
+                  Scan a document
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
