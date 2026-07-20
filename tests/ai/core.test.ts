@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { hashKey, prune } from "@/lib/ai/cache";
-import { buildBody } from "@/lib/ai/gemini";
+import { buildBody, isKeyProblem } from "@/lib/ai/gemini";
 import { chainFor, estimateCost, MODEL_CHAINS } from "@/lib/ai/models";
 import { runJson, setAiProvider } from "@/lib/ai/client";
 import { summariseAiLog, type AiLogEntry } from "@/lib/ai/telemetry";
@@ -110,6 +110,26 @@ describe("buildBody", () => {
     expect(body.generationConfig.responseSchema).toBeUndefined();
     expect(body.generationConfig.responseMimeType).toBeUndefined();
     expect(body.tools).toBeDefined();
+  });
+});
+
+describe("error classification", () => {
+  // Gemini answers a bad key with 400, not 401/403 — verified against the
+  // live API. Classifying it as a generic response error hides the only
+  // action that fixes it, so this is pinned.
+  it("recognises a bad key behind a 400", () => {
+    expect(isKeyProblem(400, "API key not valid. Please pass a valid API key.")).toBe(true);
+    expect(isKeyProblem(400, "API_KEY_INVALID")).toBe(true);
+    expect(isKeyProblem(403, "Permission denied")).toBe(true);
+    expect(isKeyProblem(401, "invalid api-key")).toBe(true);
+  });
+
+  it("does not mistake an ordinary bad request for a key problem", () => {
+    expect(isKeyProblem(400, "Invalid JSON payload received. Unknown name thinkingConfig")).toBe(
+      false,
+    );
+    expect(isKeyProblem(429, "Resource exhausted")).toBe(false);
+    expect(isKeyProblem(500, "Internal error")).toBe(false);
   });
 });
 

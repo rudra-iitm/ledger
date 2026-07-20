@@ -147,8 +147,26 @@ function isModelMissing(status: number, message: string): boolean {
   );
 }
 
+/**
+ * True when the failure is about the key rather than the request.
+ *
+ * Gemini answers a bad key with **400**, not 401/403, so status alone can't
+ * tell this apart from a malformed request. Without this check a wrong key
+ * surfaces as a generic "response" error and the UI never offers the one
+ * thing that would fix it.
+ */
+export function isKeyProblem(status: number, message: string): boolean {
+  return (
+    (status === 400 || status === 401 || status === 403) &&
+    /api[ _-]?key not valid|invalid api[ _-]?key|api[ _-]?key expired|API_KEY_INVALID|permission denied/i.test(
+      message,
+    )
+  );
+}
+
 /** True when the failure looks like an unrecognised generationConfig field. */
 function isBadArgument(status: number, message: string): boolean {
+  if (isKeyProblem(status, message)) return false;
   return (
     status === 400 &&
     /invalid|unknown name|unsupported|not supported|thinking|schema/i.test(message)
@@ -156,7 +174,7 @@ function isBadArgument(status: number, message: string): boolean {
 }
 
 function mapHttpError(status: number, message: string): AiError {
-  if (status === 401 || status === 403) {
+  if (isKeyProblem(status, message) || status === 401 || status === 403) {
     return new AiError("Gemini rejected the API key — check it in Settings.", "auth");
   }
   if (status === 429) {

@@ -38,7 +38,7 @@ import {
 } from "@/components/ui/select";
 import { formatMoney } from "@/lib/domain/money";
 import { clearAiKey, getAiKey, setAiKey } from "@/lib/ai/gemini";
-import { readAiLog } from "@/lib/ai/telemetry";
+import { AiActivityLog } from "@/components/ai-activity-log";
 import { Input } from "@/components/ui/input";
 import { useAppStore } from "@/lib/store/app-store";
 
@@ -67,13 +67,11 @@ export function SettingsView() {
   const [remindersBusy, setRemindersBusy] = useState(false);
   const [aiKeyValue, setAiKeyValue] = useState("");
   const [aiKeySet, setAiKeySet] = useState(false);
-  const [aiCalls, setAiCalls] = useState(0);
 
   useEffect(() => {
     setRemindersSupported(pushSupported());
     void remindersEnabled().then(setRemindersOn);
     setAiKeySet(Boolean(getAiKey()));
-    setAiCalls(readAiLog().length);
   }, []);
 
   const saveAiKey = () => {
@@ -306,24 +304,17 @@ export function SettingsView() {
           <div className="flex items-start gap-3">
             <Bot aria-hidden className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
             <p className="text-[12px] leading-relaxed text-muted-foreground">
-              Powers monthly-review summaries, smarter search, and
-              auto-categorization. Your key stays in this browser only — never
-              in your synced data or backups. Only the minimum needed is sent
-              per feature (aggregate stats or merchant names, never balances
-              or account numbers).
+              Powers the copilot, insights, document scanning, monthly-review
+              summaries, smarter search and auto-categorization. Your key stays
+              in this browser only — never in your synced data or backups. Only
+              the minimum needed is sent per feature (aggregate stats or
+              merchant names, never balances or account numbers), and every
+              call is listed below.
             </p>
           </div>
           {aiKeySet ? (
             <div className="flex items-center justify-between gap-3">
-              <span className="text-[14px]">
-                Key saved
-                {aiCalls > 0 ? (
-                  <span className="text-muted-foreground">
-                    {" "}
-                    · {aiCalls} recent call{aiCalls === 1 ? "" : "s"}
-                  </span>
-                ) : null}
-              </span>
+              <span className="text-[14px]">Key saved</span>
               <Button size="sm" variant="outline" onClick={removeAiKey}>
                 Remove key
               </Button>
@@ -349,6 +340,11 @@ export function SettingsView() {
               </Button>
             </form>
           )}
+        </div>
+
+        <div className="flex flex-col gap-3 rounded-2xl border border-border bg-card px-4 py-4 shadow-soft">
+          <h3 className="text-[13px] font-medium">Activity</h3>
+          <AiActivityLog />
         </div>
       </section>
 
