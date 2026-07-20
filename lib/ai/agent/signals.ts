@@ -15,8 +15,9 @@
 
 import { detectAnomalies } from "@/lib/domain/anomalies";
 import { budgetSummary, categoryBudgetSummaries } from "@/lib/domain/budget";
-import { currentMonth, formatDisplayDate, todayISO } from "@/lib/domain/dates";
+import { currentMonth, formatDisplayDate } from "@/lib/domain/dates";
 import { projectCashFlow } from "@/lib/domain/forecast";
+import { mineRecurring } from "@/lib/domain/ingest/recurrence";
 import { formatMoney } from "@/lib/domain/money";
 import { daysUntil, upcomingRenewals } from "@/lib/domain/subscriptions";
 import type { LedgerData } from "@/lib/storage/repository";
@@ -250,6 +251,57 @@ function inboxSignals(data: LedgerData): DraftSignal[] {
 }
 
 /* ------------------------------------------------------------------ */
+/* Recurring payments the user hasn't told us about                   */
+/* ------------------------------------------------------------------ */
+
+/**
+ * A subscription you're paying but haven't tracked is invisible money.
+ *
+ * `mineRecurring` was already doing this work — it was just buried on the
+ * Inbox screen, which a user only opens after an import. Promoting the
+ * strongest candidate to a signal is the difference between a feature that
+ * exists and a feature that fires.
+ *
+ * Only the top candidate, and only ones seen at least three times: two
+ * coincidences are not a subscription, and a list of maybes is worse than
+ * silence.
+ */
+function recurringSignals(data: LedgerData, now: Date): DraftSignal[] {
+  const suggestions = mineRecurring(
+    data.expenses,
+    {
+      subscriptions: data.subscriptions,
+      recurring: data.recurring,
+      dismissed: data.inbox.dismissedSuggestions,
+    },
+    now,
+  ).filter((item) => item.occurrences >= 3);
+
+  const best = suggestions[0];
+  if (!best) return [];
+
+  const currency = data.settings.currency;
+  const label = best.kind === "emi" ? "EMI" : best.kind === "bill" ? "bill" : "subscription";
+
+  return [
+    {
+      id: `recurring:${best.key}`,
+      kind: "recurring",
+      severity: "info",
+      title: `${best.merchant} looks recurring`,
+      body: `${formatMoney(best.averageAmount, currency)} ${best.cadence}, ${
+        best.occurrences
+      } times so far. Track it as a ${label} and it'll show up in your forecast.`,
+      evidence: `${best.occurrences} charges, last on ${best.lastDate}, next expected ${best.nextExpected}.`,
+      href: "/inbox",
+      source: "computed",
+      daysAway: Math.max(0, daysUntil(best.nextExpected, now)),
+      dismissible: true,
+    },
+  ];
+}
+
+/* ------------------------------------------------------------------ */
 /* Assembly                                                           */
 /* ------------------------------------------------------------------ */
 
@@ -274,29 +326,9 @@ export function buildComputedSignals(context: SignalContext): Signal[] {
     ...budgetSignals(context.data, now),
     ...anomalySignals(context.data, now),
     ...renewalSignals(context.data, now),
+    ...recurringSignals(context.data, now),
     ...inboxSignals(context.data),
   ].filter((signal) => !(signal.dismissible && dismissed.has(signal.id)));
 
   return rankSignals(drafts);
-}
-
-/**
- * A one-line summary of the day, computed.
- *
- * This is what the dashboard shows when there is no model available or the
- * agent hasn't run yet — so the headline slot is never empty and never a
- * spinner.
- */
-export function computedHeadline(data: LedgerData, now: Date = new Date()): string {
-  const currency = data.settings.currency;
-  const summary = budgetSummary(data.expenses, data.budgets.monthlyBudget, currentMonth(now));
-
-  if (summary.budget > 0) {
-    return summary.overBudget
-      ? `${formatMoney(Math.abs(summary.remaining), currency)} over budget with ${formatDisplayDate(
-          todayISO(now),
-        )} on the clock.`
-      : `${formatMoney(summary.remaining, currency)} left to spend this month.`;
-  }
-  return `${formatMoney(summary.spent, currency)} spent so far this month.`;
 }

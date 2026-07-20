@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildComputedSignals, computedHeadline } from "@/lib/ai/agent/signals";
+import { buildComputedSignals } from "@/lib/ai/agent/signals";
 import { EMPTY_DATA, type LedgerData } from "@/lib/storage/repository";
 import type { Account, Expense, RecurringExpense, Subscription } from "@/lib/domain/types";
 
@@ -149,6 +149,37 @@ describe("buildComputedSignals", () => {
     expect(first.id).not.toBe(later.id);
   });
 
+  it("surfaces an untracked recurring charge once it has happened three times", () => {
+    const charges = ["2026-05-05", "2026-06-05", "2026-07-05"].map((date, i) =>
+      expense({ id: `sp-${i}`, description: "SPOTIFY INDIA", amount: 119, date, category: "Entertainment" }),
+    );
+    const signals = buildComputedSignals({ data: data({ expenses: charges }), now: NOW });
+    const found = signals.find((signal) => signal.kind === "recurring");
+    expect(found?.title).toContain("recurring");
+    expect(found?.evidence).toContain("3 charges");
+  });
+
+  it("does not call two charges a subscription", () => {
+    // Two coincidences are not a pattern, and a list of maybes is worse
+    // than silence.
+    const charges = ["2026-06-05", "2026-07-05"].map((date, i) =>
+      expense({ id: `sp-${i}`, description: "SPOTIFY INDIA", amount: 119, date }),
+    );
+    const signals = buildComputedSignals({ data: data({ expenses: charges }), now: NOW });
+    expect(signals.some((signal) => signal.kind === "recurring")).toBe(false);
+  });
+
+  it("stays quiet about a merchant the user already tracks", () => {
+    const charges = ["2026-05-05", "2026-06-05", "2026-07-05"].map((date, i) =>
+      expense({ id: `nf-${i}`, description: "Netflix", amount: 649, date }),
+    );
+    const signals = buildComputedSignals({
+      data: data({ expenses: charges, subscriptions: [subscription()] }),
+      now: NOW,
+    });
+    expect(signals.some((signal) => signal.kind === "recurring")).toBe(false);
+  });
+
   it("marks every computed signal as computed, never as model output", () => {
     const signals = buildComputedSignals({
       data: data({
@@ -160,20 +191,5 @@ describe("buildComputedSignals", () => {
     });
     expect(signals.length).toBeGreaterThan(0);
     expect(signals.every((signal) => signal.source === "computed")).toBe(true);
-  });
-});
-
-describe("computedHeadline", () => {
-  it("falls back to spend when no budget is set", () => {
-    const line = computedHeadline(data({ expenses: [expense()] }), NOW);
-    expect(line).toContain("spent so far this month");
-  });
-
-  it("reports what is left against a budget", () => {
-    const line = computedHeadline(
-      data({ expenses: [expense()], budgets: { monthlyBudget: 10000, categoryBudgets: {} } }),
-      NOW,
-    );
-    expect(line).toContain("left to spend");
   });
 });
