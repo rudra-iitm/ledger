@@ -14,7 +14,7 @@
 import { detectAnomalies } from "@/lib/domain/anomalies";
 import { resolveBrand } from "@/lib/brands/registry";
 import { budgetSummary } from "@/lib/domain/budget";
-import { currentMonth, todayISO } from "@/lib/domain/dates";
+import { currentMonth, formatDisplayDate, formatFullDate, todayISO } from "@/lib/domain/dates";
 import { projectCashFlow } from "@/lib/domain/forecast";
 import { healthReport, type HealthReport } from "@/lib/domain/health";
 import { formatMoney } from "@/lib/domain/money";
@@ -237,8 +237,10 @@ export function briefingFacts(data: LedgerData, now: Date): string {
   );
   lines.push(
     `Liquid balance now ${formatMoney(forecast.start, currency)}; projected low over 30 days ` +
-      `${formatMoney(forecast.lowest.balance, currency)} on ${forecast.lowest.date}` +
-      (forecast.firstNegative ? `, going negative on ${forecast.firstNegative.date}.` : "."),
+      `${formatMoney(forecast.lowest.balance, currency)} on ${formatDisplayDate(forecast.lowest.date)}` +
+      (forecast.firstNegative
+        ? `, going negative on ${formatDisplayDate(forecast.firstNegative.date)}.`
+        : "."),
   );
 
   const events = upcomingEvents(
@@ -255,7 +257,10 @@ export function briefingFacts(data: LedgerData, now: Date): string {
     events.length
       ? `Due in the next 7 days: ${events
           .slice(0, 6)
-          .map((event) => `${event.title} ${formatMoney(event.amount, currency)} on ${event.date}`)
+          .map(
+            (event) =>
+              `${event.title} ${formatMoney(event.amount, currency)} on ${formatDisplayDate(event.date)}`,
+          )
           .join("; ")}.`
       : "Nothing scheduled in the next 7 days.",
   );
@@ -304,7 +309,7 @@ export async function buildBriefing(context: AdvisorContext): Promise<string> {
       userText(
         briefingPrompt.render({
           currency: context.data.settings.currency,
-          today: todayISO(context.now),
+          today: formatFullDate(todayISO(context.now)),
           facts,
         }),
       ),

@@ -321,7 +321,7 @@ export interface BriefingVars {
 
 export const briefingPrompt = definePrompt<BriefingVars>({
   id: "briefing.daily",
-  version: 1,
+  version: 2,
   description: "A short proactive brief for the dashboard.",
   tier: "fast",
   temperature: 0.3,
@@ -331,6 +331,10 @@ export const briefingPrompt = definePrompt<BriefingVars>({
     "",
     "Write 2 to 3 sentences the user reads over coffee. Lead with whatever is most time-sensitive.",
     "If nothing needs attention, say so in one sentence — a quiet day is a good report, not a reason to invent concern.",
+    // Left to itself the model normalises every date to 2026-07-25, which is
+    // the one format nothing else in the app uses. Formatting the facts wasn't
+    // enough — it reformatted them back — so the rule has to be explicit.
+    'Write dates the way a person says them ("25 Jul", "next Tuesday"). Never write an ISO date like 2026-07-25.',
   ].join("\n"),
   render: (vars) =>
     [`Today is ${vars.today}. Currency: ${vars.currency}.`, "", vars.facts].join("\n"),
