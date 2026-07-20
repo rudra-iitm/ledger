@@ -160,12 +160,18 @@ part, because it exercised the failure path for real:
 4. The agent ran on idle and the run ledger recorded:
    `{"spentToday":1,"jobs":{"agent.brief":{"failures":1,...}}}`
 
-Point 4 is the valuable one. The Gemini key supplied for this sprint
-(`AQ.Ab8RN6It…`) is an OAuth-style token, not an `AIza…` API key, so the call
-failed — and the failure behaved exactly as designed: **one** charged call, a
-recorded failure, a 5-minute backoff, **no error surfaced to the user**, and the
-computed signal layer still rendering the feed on its own. The degradation story
-is not a claim in this document; it is what the app actually did.
+Point 4 is the valuable one: the call failed, and the failure behaved exactly as
+designed — **one** charged call, a recorded failure, a 5-minute backoff, **no
+error surfaced to the user**, and the computed signal layer still rendering the
+feed on its own. The degradation story is not a claim in this document; it is
+what the app actually did.
+
+> **Correction (added after the sprint).** I originally wrote here that the key
+> `AQ.Ab8RN6It…` was "an OAuth-style token, not an `AIza…` API key" and therefore
+> invalid. **That was wrong.** I inferred it from the key's shape instead of
+> testing it. Tested directly, the key authenticates fine: `ListModels` returns
+> 200 with 50 models. The real cause was on Google's side and is far more
+> interesting — see §8.
 
 A test bug was also caught by `tsc` mid-sprint: a fingerprint case was passing
 `InboxData` where `LedgerData` was expected, so both sides fell back to
@@ -198,14 +204,58 @@ user-initiated (you pick the file), so it is not a gimmick surface.
 
 ---
 
-## 7. Recommended next steps
+## 8. Phase 2 of the sprint — what the real key exposed
 
-1. **Replace the Gemini key** with an `AIza…` key from
-   [Google AI Studio](https://aistudio.google.com/apikey) — the model layer cannot
-   run until then, though everything else works.
-2. **Phase 3** as agent jobs: a `wealth.review` job producing projected-net-worth
+Testing the key properly (rather than judging it by its shape) turned up a
+genuine production bug that no amount of code review had found.
+
+**What the live API says today:**
+
+| Call | Result |
+|---|---|
+| `GET /v1beta/models` | **200**, 50 models — the key is valid |
+| `POST gemini-flash-latest:generateContent` | **503** "currently experiencing high demand" |
+| `POST gemini-2.5-flash:generateContent` | **404** "no longer available to new users" |
+
+**The bug.** `attempt()` in `lib/ai/gemini.ts` treated a 503 like any other
+error and threw straight out of the model loop. So the head of a chain being
+*busy* killed the entire tier, while `gemini-flash-lite-latest` sat unused two
+lines below it in the same chain. `client.ts` then retried the identical
+request three times into the same busy model. For the background agent this
+was worst of all: it charges its daily ceiling **before** each call, so a
+passing spike on one Google model could burn the whole day's budget and
+produce nothing.
+
+**The fix.** A 503 is a statement about one model, not about the API. It now
+walks the chain exactly as a retired id does, and only throws when every model
+is busy — still `retryable`, so the client backs off and tries later.
+
+**The second-order bug my own fix introduced,** caught before commit:
+`rememberResolved()` pins the winning model to the front of a tier
+permanently. Correct for retirement (durable), wrong for overload (transient) —
+without a guard, one busy minute would have silently demoted a tier to a weaker
+model forever. It now pins only when every skipped model was permanently gone.
+
+**Dead safety net removed.** `gemini-2.5-flash` was the pinned fallback in two
+chains and is provably retired — a wasted probe per new user, protecting
+nobody. Replaced with `gemini-3.5-flash`, verified to serve this account.
+
+10 new tests; the 4 behavioural ones were confirmed to **fail** against the
+pre-fix transport and pass after it. Suite: **203 passing**.
+
+The lesson generalises: the model layer's failure modes are only discoverable
+against a real endpoint. A pinned fallback nobody has called in a year is a
+guess, not a net — §`MODEL_CHAINS` now says so in a comment with a date.
+
+---
+
+## 9. Recommended next steps
+
+1. **Phase 3** as agent jobs: a `wealth.review` job producing projected-net-worth
    and allocation-drift signals.
-3. **Push the brief to the lock screen** — the reminders infrastructure
+2. **Push the brief to the lock screen** — the reminders infrastructure
    (data-less Web Push) already exists.
-4. Consider promoting `autonomy` to a three-state setting if the 6-call ceiling
+3. Consider promoting `autonomy` to a three-state setting if the 6-call ceiling
    proves too tight in daily use.
+4. **Re-verify the pinned model ids** when a Gemini generation ships. There is a
+   dated note in `lib/ai/models.ts` explaining how.
