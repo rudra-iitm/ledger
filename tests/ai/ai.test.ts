@@ -69,3 +69,17 @@ describe("prompt builders", () => {
     expect(prompt).toContain("Do not invent numbers");
   });
 });
+
+describe("extractJson truncation repair", () => {
+  it("repairs Gemini-3-style truncated JSON (missing closing braces)", () => {
+    expect(
+      extractJson<{ query: string }>(
+        '{\n  "category": null,\n  "preset": null,\n  "query": "sanjana"',
+      ),
+    ).toEqual({ category: null, preset: null, query: "sanjana" });
+    expect(extractJson<string[]>('["Food", "Travel"')).toEqual(["Food", "Travel"]);
+    expect(
+      extractJson<{ a: string }>('{"a": "unterminated strin'),
+    ).toEqual({ a: "unterminated strin" });
+  });
+});

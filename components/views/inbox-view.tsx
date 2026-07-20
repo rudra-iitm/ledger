@@ -516,7 +516,13 @@ export function InboxView() {
       const batch = uncategorized.slice(0, 40);
       const text = await generate(
         buildCategorizePrompt(batch.map((draft) => draft.description)),
-        { feature: "categorize-drafts", json: true },
+        {
+          feature: "categorize-drafts",
+          schema: {
+            type: "ARRAY",
+            items: { type: "STRING", enum: [...CATEGORIES] },
+          },
+        },
       );
       const parsed = extractJson<string[]>(text);
       if (!parsed || !Array.isArray(parsed)) {

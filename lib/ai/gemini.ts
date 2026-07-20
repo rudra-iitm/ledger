@@ -12,7 +12,9 @@
 
 const KEY_STORAGE = "ledger:ai-key";
 const LOG_STORAGE = "ledger:ai-log";
-const DEFAULT_MODEL = "gemini-2.5-flash";
+// The -latest alias tracks Google's current flash model, so the app keeps
+// working when individual model versions are retired for new accounts.
+const DEFAULT_MODEL = "gemini-flash-latest";
 const LOG_LIMIT = 20;
 
 export interface AiLogEntry {
@@ -72,6 +74,12 @@ export class AiError extends Error {
 interface GenerateOptions {
   feature: string;
   json?: boolean;
+  /**
+   * OpenAPI-style response schema for Gemini's constrained decoding —
+   * guarantees complete, valid JSON (Gemini 3 without it occasionally
+   * drops the closing brace on JSON responses).
+   */
+  schema?: object;
   model?: string;
 }
 
@@ -95,7 +103,10 @@ export async function generate(
           contents: [{ parts: [{ text: prompt }] }],
           generationConfig: {
             temperature: 0.2,
-            ...(options.json ? { responseMimeType: "application/json" } : {}),
+            ...(options.json || options.schema
+              ? { responseMimeType: "application/json" }
+              : {}),
+            ...(options.schema ? { responseSchema: options.schema } : {}),
           },
         }),
       },

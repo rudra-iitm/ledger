@@ -91,7 +91,19 @@ export function SearchSheet({
     try {
       const text = await generate(buildFilterPrompt(query), {
         feature: "search-filter",
-        json: true,
+        schema: {
+          type: "OBJECT",
+          properties: {
+            category: {
+              type: "STRING",
+              enum: [...CATEGORIES],
+              nullable: true,
+            },
+            preset: { type: "STRING", nullable: true },
+            query: { type: "STRING" },
+          },
+          required: ["query"],
+        },
       });
       const parsed = extractJson<{
         category?: string | null;
