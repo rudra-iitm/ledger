@@ -31,7 +31,8 @@ import {
   type RecurringSuggestion,
 } from "@/lib/domain/ingest/recurrence";
 import { detectAnomalies, type FinanceAlert } from "@/lib/domain/anomalies";
-import { AiError, aiAvailable, generate } from "@/lib/ai/gemini";
+import { aiAvailable } from "@/lib/ai/gemini";
+import { AiError, generate } from "@/lib/ai/client";
 import { buildCategorizePrompt } from "@/lib/ai/prompts";
 import { extractJson } from "@/lib/ai/parse";
 import { formatMoney } from "@/lib/domain/money";

@@ -24,31 +24,38 @@ export interface ModelSpec {
 /**
  * Ordered preference per tier. First entry is the intent; the rest are
  * fallbacks that keep the feature alive if the intent is retired.
+ *
+ * The `-latest` aliases lead every chain deliberately. Pinned ids rot: this
+ * app is bring-your-own-key, so a model Google retires for *new* accounts
+ * silently breaks AI for exactly the users who just signed up — which is how
+ * `gemini-2.5-flash` failed here before. The alias tracks Google's current
+ * model of that class, and the pinned ids behind it are the safety net for
+ * the day an alias is the thing that disappears.
  */
 export const MODEL_CHAINS: Record<ModelTier, ModelSpec[]> = {
   /** High-volume, low-stakes classification: categorization, merchant naming. */
   fast: [
-    { id: "gemini-3.1-flash-lite", inputPer1M: 0.1, outputPer1M: 0.4 },
+    { id: "gemini-flash-lite-latest", inputPer1M: 0.1, outputPer1M: 0.4 },
     { id: "gemini-2.5-flash-lite", inputPer1M: 0.1, outputPer1M: 0.4 },
-    { id: "gemini-2.5-flash", inputPer1M: 0.3, outputPer1M: 2.5 },
+    { id: "gemini-flash-latest", inputPer1M: 0.3, outputPer1M: 2.5 },
   ],
   /** Everyday reasoning: the copilot, query compilation, narration. */
   balanced: [
-    { id: "gemini-3.5-flash", inputPer1M: 0.3, outputPer1M: 2.5 },
+    { id: "gemini-flash-latest", inputPer1M: 0.3, outputPer1M: 2.5 },
     { id: "gemini-2.5-flash", inputPer1M: 0.3, outputPer1M: 2.5 },
-    { id: "gemini-2.5-flash-lite", inputPer1M: 0.1, outputPer1M: 0.4 },
+    { id: "gemini-flash-lite-latest", inputPer1M: 0.1, outputPer1M: 0.4 },
   ],
   /** Multi-step advice where being wrong is expensive: goals, tax, portfolio. */
   deep: [
+    { id: "gemini-pro-latest", inputPer1M: 1.25, outputPer1M: 10 },
     { id: "gemini-2.5-pro", inputPer1M: 1.25, outputPer1M: 10 },
-    { id: "gemini-3.5-flash", inputPer1M: 0.3, outputPer1M: 2.5 },
-    { id: "gemini-2.5-flash", inputPer1M: 0.3, outputPer1M: 2.5 },
+    { id: "gemini-flash-latest", inputPer1M: 0.3, outputPer1M: 2.5 },
   ],
   /** Documents: receipts, invoices, payslips, statement scans. */
   vision: [
-    { id: "gemini-3.5-flash", inputPer1M: 0.3, outputPer1M: 2.5 },
+    { id: "gemini-flash-latest", inputPer1M: 0.3, outputPer1M: 2.5 },
     { id: "gemini-2.5-flash", inputPer1M: 0.3, outputPer1M: 2.5 },
-    { id: "gemini-2.5-pro", inputPer1M: 1.25, outputPer1M: 10 },
+    { id: "gemini-pro-latest", inputPer1M: 1.25, outputPer1M: 10 },
   ],
 };
 

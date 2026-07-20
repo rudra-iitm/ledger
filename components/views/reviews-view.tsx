@@ -13,7 +13,8 @@ import {
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/empty-state";
-import { AiError, aiAvailable, generate } from "@/lib/ai/gemini";
+import { aiAvailable } from "@/lib/ai/gemini";
+import { AiError, generate } from "@/lib/ai/client";
 import { buildReviewPrompt } from "@/lib/ai/prompts";
 import { resolveInstitution } from "@/lib/institutions/registry";
 import { InstitutionIcon } from "@/components/institution-icon";

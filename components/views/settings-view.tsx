@@ -37,12 +37,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { formatMoney } from "@/lib/domain/money";
-import {
-  clearAiKey,
-  getAiKey,
-  readAiLog,
-  setAiKey,
-} from "@/lib/ai/gemini";
+import { clearAiKey, getAiKey, setAiKey } from "@/lib/ai/gemini";
+import { readAiLog } from "@/lib/ai/telemetry";
 import { Input } from "@/components/ui/input";
 import { useAppStore } from "@/lib/store/app-store";
 
