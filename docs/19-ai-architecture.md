@@ -23,10 +23,15 @@ yourself asking a model to add things up, stop — write the domain function.
 
 ```
 components/            ← screens; know nothing about models or HTTP
-  copilot-view, insights-view, scan-view, ai-briefing, ai-activity-log
+  signal-feed, autonomy-card, insights-view, scan-view, ai-activity-log
         │
+components/agent/agent-provider.tsx
+        │              ← the ONLY place the agent meets React or the store.
+        │                Jobs declare intent (AgentActions); this performs it.
+lib/ai/agent/          ← the background runtime: signals, jobs, scheduler
+        │                computed signals need no model and no key at all
 lib/ai/features/       ← one module per capability
-  copilot · advisor · documents · categorize
+  advisor · documents · categorize
         │
 lib/ai/client.ts       ← THE ONLY DOOR. spend guards, cache, retry,
         │                validation, telemetry
@@ -54,7 +59,7 @@ ordered **chain**, not one id:
 | Tier | For | Leads with |
 |---|---|---|
 | `fast` | categorization, query compilation | `gemini-flash-lite-latest` |
-| `balanced` | copilot, insights, narration | `gemini-flash-latest` |
+| `balanced` | insights, narration, daily brief | `gemini-flash-latest` |
 | `deep` | health plans, goals, tax | `gemini-pro-latest` |
 | `vision` | receipts, invoices, payslips | `gemini-flash-latest` |
 

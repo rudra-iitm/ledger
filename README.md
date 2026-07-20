@@ -19,7 +19,11 @@ Manual entry is the fallback, not the workflow:
 - **Financial health score** — six explainable components (savings rate, emergency fund, debt load, diversification, budget discipline, cash cushion) with the formula printed under each — no black boxes.
 - **Smart search** — "food last month" or "amazon this year" compiles into applied filters on the expense list.
 - **Budget suggestions** — one tap fills budgets from your last three months' per-category medians.
-- **AI copilot, bring-your-own-key (Gemini)** — optional and off by default. Ask anything about your money and get an answer computed from your own ledger: the model chooses which question to ask and how to say it, but every number comes from Ledger's own engines, and each claim links back to the transactions behind it. Also: **document scanning** (photograph a receipt or pick a PDF invoice/payslip/statement — merchant, date, total and line items are extracted into an Inbox draft you confirm), **insights** (waste, drift, lifestyle inflation, each with its evidence and a confidence level), a **ranked health plan**, a **daily brief**, and smarter categorization that learns from your corrections by proposing rules. The key lives in your browser only (never synced, never in backups), prompts are data-minimized, nothing runs without a tap, and every call is listed with its cost in Settings. See [docs/19-ai-architecture.md](docs/19-ai-architecture.md).
+- **An agent, not a chatbot** — there is no AI screen, no "Ask AI" button and nothing to prompt. A background runtime watches your ledger and publishes **signals**: ranked, dismissable statements that appear when they're true and vanish when they aren't ("Short before payday", "Spotify looks recurring", "3 sorted for you"). Every signal shows its numbers on tap.
+
+  The intelligence is two layers, and the order matters. The **computed layer** is pure, offline and free — cash-flow overdrafts, budget breaches, double charges, price hikes, renewals, untracked subscriptions. It needs no API key and carries the app on its own. The **model layer** (bring-your-own Gemini key) is an enhancement on top: it categorises imported rows the rules couldn't place, writes the rule when it has seen a merchant twice, and refreshes a one-line daily brief. Pull the key out and Ledger still tells you the balance goes negative on the 14th — it just says it in our words instead of the model's.
+
+  Autonomous work is capped at **6 model calls a day**, runs serially on idle, backs off exponentially on failure, and fails **silently** — you didn't ask for it, so you don't get an error about it. Settings lists every job the agent may run, what it has spent today, and a single switch to stop it. The key lives in your browser only (never synced, never in backups) and prompts are data-minimised. Also: **document scanning** (photograph a receipt or pick a PDF invoice/payslip/statement) and **insights** with evidence and confidence levels. See [docs/19-ai-architecture.md](docs/19-ai-architecture.md).
 - **Tax pack** — one CSV per financial year (Apr–Mar) with income, investment transactions, deduction-tagged expenses (#80c #80d #hra), and category totals.
 
 ## Everything else
@@ -37,7 +41,7 @@ Manual entry is the fallback, not the workflow:
 
 ## Tech
 
-Next.js 15 (static export) · TypeScript (strict) · Tailwind CSS v4 · shadcn-style Radix primitives · Zustand · Zod · Recharts · pdf.js · Sonner · Vaul · Octokit · jsPDF · Vitest (151 tests).
+Next.js 15 (static export) · TypeScript (strict) · Tailwind CSS v4 · shadcn-style Radix primitives · Zustand · Zod · Recharts · pdf.js · Sonner · Vaul · Octokit · jsPDF · Vitest (193 tests).
 
 ## Architecture
 
@@ -66,7 +70,14 @@ lib/
 │   ├── gemini.ts       Transport only, w/ model + request-body degradation
 │   ├── tools.ts        Read-only tools bridging the model to lib/domain
 │   ├── prompts/        Versioned templates; data-minimisation lives here
-│   └── features/       copilot · advisor · documents · categorize
+│   ├── features/       advisor · documents · categorize
+│   └── agent/          The background runtime — see below
+│       ├── types.ts       Signal model + deterministic ranking
+│       ├── signals.ts     Computed signals: pure, offline, free, no key
+│       ├── jobs.ts        Autonomous work; each fingerprints its own inputs
+│       ├── runtime.ts     Scheduler: daily ceiling, backoff, idle dispatch
+│       ├── run-ledger.ts  Device-local run bookkeeping (never synced)
+│       └── dismissals.ts  Device-local signal dismissals
 ├── auth/ · export/ · groups/ · pwa/ · brands/ · institutions/ · pdf/
 ```
 
