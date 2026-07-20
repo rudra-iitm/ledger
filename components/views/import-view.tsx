@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { ArrowRight, CheckCircle2, FileUp, Inbox } from "lucide-react";
 import { toast } from "sonner";
@@ -81,6 +81,16 @@ export function ImportView() {
   const [rememberPassword, setRememberPassword] = useState(true);
   const [mapping, setMapping] = useState<CsvMapping>(DEFAULT_MAPPING);
   const [result, setResult] = useState<ImportBatch | null>(null);
+
+  // Start on the first usable account instead of an empty selection — with
+  // nothing selected the file picker is disabled and the screen dead-ends.
+  useEffect(() => {
+    if (accountId) return;
+    const first = accounts.find(
+      (account) => !account.archived && account.type !== "investment",
+    );
+    if (first) setAccountId(first.id);
+  }, [accounts, accountId]);
 
   const table = useMemo(
     () => (fileText ? parseCsv(fileText) : []),
@@ -299,8 +309,14 @@ export function ImportView() {
         <Button
           variant="outline"
           className="justify-start"
-          disabled={!accountId || extracting}
-          onClick={() => fileInput.current?.click()}
+          disabled={extracting}
+          onClick={() => {
+            if (!accountId) {
+              toast.error("Choose an account to import into first.");
+              return;
+            }
+            fileInput.current?.click();
+          }}
         >
           <FileUp aria-hidden />
           {extracting ? "Reading PDF…" : (fileName ?? "Choose file…")}

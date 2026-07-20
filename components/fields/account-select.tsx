@@ -35,7 +35,9 @@ export function AccountSelect({
 
   return (
     <Select
-      value={value ?? NONE}
+      // With no selection, pass undefined so the placeholder shows — the NONE
+      // sentinel only exists as an item when allowNone is on.
+      value={value ?? (allowNone ? NONE : undefined)}
       onValueChange={(next) => onChange(next === NONE ? undefined : next)}
     >
       <SelectTrigger id={id}>
