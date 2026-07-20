@@ -1,7 +1,7 @@
 # Overnight Sprint — Ledger as an Agentic Finance OS
 
 **Date:** 20 July 2026
-**Baseline:** `84cca74` · **Head:** `c7fa8c5` · 4 commits, 21 files, +2017 / −627
+**Baseline:** `84cca74` · 9 commits · 27 files · **203 tests passing** (was 160)
 
 ---
 
@@ -144,7 +144,7 @@ one switch to stop it. Without this the agent is spyware with good intentions.
 ```
 typecheck   tsc --noEmit            clean
 lint        eslint                  clean, 0 warnings
-tests       vitest run              193 passed / 193 (was 160) — 33 new
+tests       vitest run              203 passed / 203 (was 160) — 43 new
 build       next build              compiled, 35/35 static pages exported
 ```
 
@@ -166,10 +166,10 @@ error surfaced to the user**, and the computed signal layer still rendering the
 feed on its own. The degradation story is not a claim in this document; it is
 what the app actually did.
 
-> **Correction (added after the sprint).** I originally wrote here that the key
-> `AQ.Ab8RN6It…` was "an OAuth-style token, not an `AIza…` API key" and therefore
-> invalid. **That was wrong.** I inferred it from the key's shape instead of
-> testing it. Tested directly, the key authenticates fine: `ListModels` returns
+> **Correction (added after the sprint).** I originally wrote here that the
+> supplied key was "an OAuth-style token, not an `AIza…` API key" and therefore
+> invalid. **That was wrong**, and I reached it by inferring from the key's
+> shape instead of testing it. Tested directly, the key authenticates fine: `ListModels` returns
 > 200 with 50 models. The real cause was on Google's side and is far more
 > interesting — see §8.
 
