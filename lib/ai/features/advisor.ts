@@ -47,6 +47,8 @@ export interface AdvisorContext {
   data: LedgerData;
   now: Date;
   signal?: AbortSignal;
+  /** Set when the user explicitly asked to regenerate rather than re-read. */
+  noCache?: boolean;
 }
 
 /* ------------------------------------------------------------------ */
@@ -93,6 +95,7 @@ export async function adviseOnHealth(
         ),
       ],
       cacheTtlSeconds: TTL.medium,
+      noCache: context.noCache,
       signal: context.signal,
     },
     healthAdviceSchema,
@@ -191,6 +194,7 @@ export async function findInsights(
         ),
       ],
       cacheTtlSeconds: TTL.medium,
+      noCache: context.noCache,
       signal: context.signal,
     },
     insightsSchema,
@@ -308,6 +312,7 @@ export async function buildBriefing(context: AdvisorContext): Promise<string> {
     // A brief is a statement about today, so it may be reused all day but
     // never across days — the date is in the prompt, so the key rolls over.
     cacheTtlSeconds: TTL.medium,
+    noCache: context.noCache,
     signal: context.signal,
   });
   return result.text;
@@ -343,6 +348,7 @@ export async function explain(
       ),
     ],
     cacheTtlSeconds: TTL.medium,
+    noCache: context.noCache,
     signal: context.signal,
   });
   return result.text;

@@ -19,7 +19,7 @@ Manual entry is the fallback, not the workflow:
 - **Financial health score** — six explainable components (savings rate, emergency fund, debt load, diversification, budget discipline, cash cushion) with the formula printed under each — no black boxes.
 - **Smart search** — "food last month" or "amazon this year" compiles into applied filters on the expense list.
 - **Budget suggestions** — one tap fills budgets from your last three months' per-category medians.
-- **AI, bring-your-own-key (Gemini)** — optional and off by default: monthly-review summaries in plain language, free-form questions turned into expense filters, and one-tap categorization of unrecognized imports. The key lives in your browser only (never synced, never in backups), prompts are data-minimized, and every call is listed in a local activity log in Settings.
+- **AI copilot, bring-your-own-key (Gemini)** — optional and off by default. Ask anything about your money and get an answer computed from your own ledger: the model chooses which question to ask and how to say it, but every number comes from Ledger's own engines, and each claim links back to the transactions behind it. Also: **document scanning** (photograph a receipt or pick a PDF invoice/payslip/statement — merchant, date, total and line items are extracted into an Inbox draft you confirm), **insights** (waste, drift, lifestyle inflation, each with its evidence and a confidence level), a **ranked health plan**, a **daily brief**, and smarter categorization that learns from your corrections by proposing rules. The key lives in your browser only (never synced, never in backups), prompts are data-minimized, nothing runs without a tap, and every call is listed with its cost in Settings. See [docs/19-ai-architecture.md](docs/19-ai-architecture.md).
 - **Tax pack** — one CSV per financial year (Apr–Mar) with income, investment transactions, deduction-tagged expenses (#80c #80d #hra), and category totals.
 
 ## Everything else
@@ -37,7 +37,7 @@ Manual entry is the fallback, not the workflow:
 
 ## Tech
 
-Next.js 15 (static export) · TypeScript (strict) · Tailwind CSS v4 · shadcn-style Radix primitives · Zustand · Zod · Recharts · pdf.js · Sonner · Vaul · Octokit · jsPDF · Vitest (92 tests).
+Next.js 15 (static export) · TypeScript (strict) · Tailwind CSS v4 · shadcn-style Radix primitives · Zustand · Zod · Recharts · pdf.js · Sonner · Vaul · Octokit · jsPDF · Vitest (151 tests).
 
 ## Architecture
 
@@ -59,6 +59,14 @@ lib/
 ├── storage/       Swappable adapters (localStorage / GitHub via Octokit),
 │                  validation + migrations, invalid-file protection
 ├── store/         Zustand store — the only bridge between UI and domain/storage
+├── ai/            Provider-agnostic AI layer (see docs/19-ai-architecture.md)
+│   ├── provider.ts     The contract — swap Gemini without touching a feature
+│   ├── models.ts       Capability tiers as model fallback chains
+│   ├── client.ts       The one door: cache, spend guards, retry, validation
+│   ├── gemini.ts       Transport only, w/ model + request-body degradation
+│   ├── tools.ts        Read-only tools bridging the model to lib/domain
+│   ├── prompts/        Versioned templates; data-minimisation lives here
+│   └── features/       copilot · advisor · documents · categorize
 ├── auth/ · export/ · groups/ · pwa/ · brands/ · institutions/ · pdf/
 ```
 

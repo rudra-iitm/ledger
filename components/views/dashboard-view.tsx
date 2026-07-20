@@ -21,6 +21,7 @@ import {
 import { ExpenseRow } from "@/components/expense-row";
 import { EmptyState } from "@/components/empty-state";
 import { InsightsStrip } from "@/components/insights-strip";
+import { AiBriefing } from "@/components/ai-briefing";
 import { QuickAddInput } from "@/components/quick-add-input";
 import { useSheets } from "@/components/sheets/sheet-context";
 import { Progress } from "@/components/ui/progress";
@@ -155,6 +156,8 @@ export function DashboardView() {
           ))}
         </section>
       )}
+
+      <AiBriefing />
 
       <InsightsStrip />
 
