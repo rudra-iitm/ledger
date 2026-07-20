@@ -15,11 +15,15 @@ export const BRAND_REGISTRY: Brand[] = [
   { id: "rapido", name: "Rapido", aliases: ["rapido bike"], category: "Travel", accentColor: "#F9C51B", domain: "rapido.bike" },
   { id: "indrive", name: "inDrive", aliases: ["indrive"], category: "Travel", accentColor: "#A0D911", domain: "indrive.com" },
   
-  { id: "swiggy", name: "Swiggy", aliases: ["swiggy limited", "swiggy instamart", "bundl technologies"], category: "Food", accentColor: "#FC8019", domain: "swiggy.com" },
+  // "swiggy instamart" is deliberately NOT an alias here: Instamart is groceries
+  // (Shopping), not a food order, and it has its own entry below. Listing it
+  // here would beat that entry on specificity and re-file every grocery run as
+  // Food — the exact bug longest-match was introduced to fix.
+  { id: "swiggy", name: "Swiggy", aliases: ["swiggy limited", "bundl technologies"], category: "Food", accentColor: "#FC8019", domain: "swiggy.com" },
   { id: "zomato", name: "Zomato", aliases: ["zomato online", "zomato media"], category: "Food", accentColor: "#E23744", domain: "zomato.com" },
   { id: "blinkit", name: "Blinkit", aliases: ["grofers"], category: "Shopping", accentColor: "#F8CB46", domain: "blinkit.com" },
   { id: "zepto", name: "Zepto", aliases: ["kirana kart"], category: "Shopping", accentColor: "#FF3269", domain: "zeptonow.com" },
-  { id: "instamart", name: "Instamart", aliases: [], category: "Shopping", accentColor: "#FC8019", domain: "swiggy.com" },
+  { id: "instamart", name: "Instamart", aliases: ["swiggy instamart"], category: "Shopping", accentColor: "#FC8019", domain: "swiggy.com" },
 
   { id: "amazon", name: "Amazon", aliases: ["amazon seller services", "amazon pay india", "amzn", "amazon.in"], category: "Shopping", accentColor: "#FF9900", domain: "amazon.in" },
   { id: "flipkart", name: "Flipkart", aliases: ["flipkart internet"], category: "Shopping", accentColor: "#2874F0", domain: "flipkart.com" },
@@ -96,13 +100,36 @@ export function resolveBrand(text: string): Brand | null {
       }
     }
     
+    /*
+     * Most specific match wins, not first-in-array.
+     *
+     * This used to return the first brand whose name or alias appeared
+     * anywhere in the text, which made resolution depend on declaration
+     * order — and silently mis-filed the cases that matter most on an Indian
+     * statement:
+     *
+     *   "AMAZON PRIME VIDEO"  → Amazon (Shopping)   should be Amazon Prime (Entertainment)
+     *   "SWIGGY INSTAMART"    → Swiggy (Food)       should be Instamart (Shopping)
+     *
+     * A longer needle is a more specific claim about the same text, so the
+     * longest match is the right answer regardless of where it sits in the
+     * registry. That also makes the registry safe to append to: a new brand
+     * can no longer shadow an existing, more specific one by being declared
+     * above it.
+     */
+    let best: Brand | null = null;
+    let bestLength = 0;
     for (const brand of BRAND_REGISTRY) {
-      if (term.includes(brand.name.toLowerCase())) return brand;
-      for (const alias of brand.aliases) {
-        if (term.includes(alias.toLowerCase())) return brand;
+      for (const needle of [brand.name, ...brand.aliases]) {
+        const lower = needle.toLowerCase();
+        if (lower.length > bestLength && term.includes(lower)) {
+          best = brand;
+          bestLength = lower.length;
+        }
       }
     }
+    if (best) return best;
   }
-  
+
   return null;
 }
