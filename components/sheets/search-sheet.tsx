@@ -1,10 +1,15 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowRight, Search, Sparkles, Users } from "lucide-react";
+import { ArrowRight, Bot, ListFilter, Search, Users } from "lucide-react";
+import { toast } from "sonner";
 import { CategoryIcon } from "@/components/category-icon";
 import { interpretSearch } from "@/lib/domain/smart-search";
+import { AiError, aiAvailable, generate } from "@/lib/ai/gemini";
+import { buildFilterPrompt } from "@/lib/ai/prompts";
+import { extractJson } from "@/lib/ai/parse";
+import { TIME_PRESETS, type TimePreset } from "@/lib/domain/time-ranges";
 import {
   Sheet,
   SheetContent,
@@ -54,15 +59,67 @@ export function SearchSheet({
   }, [groups, trimmed]);
 
   const smartQuery = useMemo(() => interpretSearch(query), [query]);
+  const [aiOn, setAiOn] = useState(false);
+  const [asking, setAsking] = useState(false);
+
+  useEffect(() => {
+    setAiOn(aiAvailable());
+  }, []);
+
+  const openFilters = (filters: {
+    category?: Category | null;
+    preset?: TimePreset | null;
+    query?: string;
+  }) => {
+    const params = new URLSearchParams();
+    if (filters.category) params.set("category", filters.category);
+    if (filters.preset) params.set("preset", filters.preset);
+    if (filters.query) params.set("q", filters.query);
+    close();
+    router.push(`/expenses?${params.toString()}`);
+  };
 
   const openSmartQuery = () => {
     if (!smartQuery) return;
-    const params = new URLSearchParams();
-    if (smartQuery.category) params.set("category", smartQuery.category);
-    if (smartQuery.preset) params.set("preset", smartQuery.preset);
-    if (smartQuery.query) params.set("q", smartQuery.query);
-    close();
-    router.push(`/expenses?${params.toString()}`);
+    openFilters(smartQuery);
+  };
+
+  // AI fallback when the deterministic interpreter finds no structure —
+  // only the question text is sent, never any ledger data.
+  const askAi = async () => {
+    setAsking(true);
+    try {
+      const text = await generate(buildFilterPrompt(query), {
+        feature: "search-filter",
+        json: true,
+      });
+      const parsed = extractJson<{
+        category?: string | null;
+        preset?: string | null;
+        query?: string;
+      }>(text);
+      if (!parsed) {
+        toast.error("Couldn't understand that — try rephrasing.");
+        return;
+      }
+      const category = CATEGORIES.includes(parsed.category as Category)
+        ? (parsed.category as Category)
+        : null;
+      const preset = TIME_PRESETS.includes(parsed.preset as TimePreset)
+        ? (parsed.preset as TimePreset)
+        : null;
+      if (!category && !preset && !parsed.query) {
+        toast.error("Couldn't turn that into a filter — try rephrasing.");
+        return;
+      }
+      openFilters({ category, preset, query: parsed.query ?? "" });
+    } catch (error) {
+      toast.error(
+        error instanceof AiError ? error.message : "AI search failed.",
+      );
+    } finally {
+      setAsking(false);
+    }
   };
 
   const noResults =
@@ -101,13 +158,33 @@ export function SearchSheet({
               onClick={openSmartQuery}
               className="flex items-center gap-3 rounded-2xl border border-border bg-card px-4 py-3 text-left shadow-soft outline-none transition-colors hover:bg-accent/50 focus-visible:ring-2 focus-visible:ring-ring"
             >
-              <Sparkles aria-hidden className="size-4 shrink-0 text-muted-foreground" />
+              <ListFilter aria-hidden className="size-4 shrink-0 text-muted-foreground" />
               <span className="flex min-w-0 flex-1 flex-col">
                 <span className="text-[14px] font-medium">
                   Show expenses: {smartQuery.label}
                 </span>
                 <span className="text-[12px] text-muted-foreground">
                   Opens the list with these filters applied
+                </span>
+              </span>
+              <ArrowRight aria-hidden className="size-4 shrink-0 text-muted-foreground" />
+            </button>
+          )}
+          {!smartQuery && aiOn && trimmed.split(/\s+/).length >= 2 && (
+            <button
+              type="button"
+              disabled={asking}
+              onClick={() => void askAi()}
+              className="flex items-center gap-3 rounded-2xl border border-border bg-card px-4 py-3 text-left shadow-soft outline-none transition-colors hover:bg-accent/50 focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60"
+            >
+              <Bot aria-hidden className="size-4 shrink-0 text-muted-foreground" />
+              <span className="flex min-w-0 flex-1 flex-col">
+                <span className="text-[14px] font-medium">
+                  {asking ? "Asking Gemini…" : `Ask AI: “${query.trim()}”`}
+                </span>
+                <span className="text-[12px] text-muted-foreground">
+                  Turns your question into expense filters — only the question
+                  is sent
                 </span>
               </span>
               <ArrowRight aria-hidden className="size-4 shrink-0 text-muted-foreground" />

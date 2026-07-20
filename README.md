@@ -19,6 +19,7 @@ Manual entry is the fallback, not the workflow:
 - **Financial health score** — six explainable components (savings rate, emergency fund, debt load, diversification, budget discipline, cash cushion) with the formula printed under each — no black boxes.
 - **Smart search** — "food last month" or "amazon this year" compiles into applied filters on the expense list.
 - **Budget suggestions** — one tap fills budgets from your last three months' per-category medians.
+- **AI, bring-your-own-key (Gemini)** — optional and off by default: monthly-review summaries in plain language, free-form questions turned into expense filters, and one-tap categorization of unrecognized imports. The key lives in your browser only (never synced, never in backups), prompts are data-minimized, and every call is listed in a local activity log in Settings.
 - **Tax pack** — one CSV per financial year (Apr–Mar) with income, investment transactions, deduction-tagged expenses (#80c #80d #hra), and category totals.
 
 ## Everything else
@@ -36,7 +37,7 @@ Manual entry is the fallback, not the workflow:
 
 ## Tech
 
-Next.js 15 (static export) · TypeScript (strict) · Tailwind CSS v4 · shadcn-style Radix primitives · Zustand · Zod · Recharts · pdf.js · Sonner · Vaul · Octokit · jsPDF · Vitest (85 tests).
+Next.js 15 (static export) · TypeScript (strict) · Tailwind CSS v4 · shadcn-style Radix primitives · Zustand · Zod · Recharts · pdf.js · Sonner · Vaul · Octokit · jsPDF · Vitest (92 tests).
 
 ## Architecture
 

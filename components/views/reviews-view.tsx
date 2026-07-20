@@ -1,15 +1,20 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
+  Bot,
   CalendarCheck,
   ChevronLeft,
   ChevronRight,
   TrendingDown,
   TrendingUp,
 } from "lucide-react";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/empty-state";
+import { AiError, aiAvailable, generate } from "@/lib/ai/gemini";
+import { buildReviewPrompt } from "@/lib/ai/prompts";
 import { resolveInstitution } from "@/lib/institutions/registry";
 import { InstitutionIcon } from "@/components/institution-icon";
 import { buildMonthlyReview } from "@/lib/domain/review";
@@ -50,6 +55,35 @@ export function ReviewsView() {
 
   const isCurrent = month >= currentMonth();
 
+  const [aiOn, setAiOn] = useState(false);
+  const [summary, setSummary] = useState<string | null>(null);
+  const [summarizing, setSummarizing] = useState(false);
+
+  useEffect(() => {
+    setAiOn(aiAvailable());
+  }, []);
+
+  // A new month invalidates the previous month's summary.
+  useEffect(() => {
+    setSummary(null);
+  }, [month]);
+
+  const explainMonth = async () => {
+    setSummarizing(true);
+    try {
+      const text = await generate(buildReviewPrompt(review, currency), {
+        feature: "review-summary",
+      });
+      setSummary(text);
+    } catch (error) {
+      toast.error(
+        error instanceof AiError ? error.message : "Couldn't generate a summary.",
+      );
+    } finally {
+      setSummarizing(false);
+    }
+  };
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
@@ -81,6 +115,37 @@ export function ReviewsView() {
         />
       ) : (
         <>
+          {aiOn && (
+            <section aria-label="AI summary" className="flex flex-col gap-2">
+              {summary ? (
+                <div className="flex flex-col gap-2 rounded-2xl border border-border bg-card px-4 py-3.5 shadow-soft">
+                  <div className="flex items-center gap-2 text-[12px] text-muted-foreground">
+                    <Bot aria-hidden className="size-3.5" />
+                    AI summary · Gemini
+                  </div>
+                  <p className="text-[14px] leading-relaxed">{summary}</p>
+                  <button
+                    type="button"
+                    onClick={() => void explainMonth()}
+                    disabled={summarizing}
+                    className="self-start text-[12px] text-muted-foreground outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+                  >
+                    {summarizing ? "Regenerating…" : "Regenerate"}
+                  </button>
+                </div>
+              ) : (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={summarizing}
+                  onClick={() => void explainMonth()}
+                >
+                  <Bot aria-hidden />
+                  {summarizing ? "Thinking…" : "Explain this month"}
+                </Button>
+              )}
+            </section>
+          )}
           <section aria-label="Overview" className="grid grid-cols-2 gap-3">
             <Stat label="Total spent" value={formatMoney(review.overview.spent, currency)} />
             <Stat

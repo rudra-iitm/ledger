@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Sparkles } from "lucide-react";
+import { History } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -102,7 +102,7 @@ export function BudgetSheet({
             size="sm"
             onClick={applySuggestions}
           >
-            <Sparkles aria-hidden />
+            <History aria-hidden />
             Suggest from my last 3 months
           </Button>
 

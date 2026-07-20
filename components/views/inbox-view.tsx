@@ -1,8 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { Check, FileUp, Inbox, Plus, Trash2, X } from "lucide-react";
+import { Bot, Check, FileUp, Inbox, Plus, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -31,6 +31,9 @@ import {
   type RecurringSuggestion,
 } from "@/lib/domain/ingest/recurrence";
 import { detectAnomalies, type FinanceAlert } from "@/lib/domain/anomalies";
+import { AiError, aiAvailable, generate } from "@/lib/ai/gemini";
+import { buildCategorizePrompt } from "@/lib/ai/prompts";
+import { extractJson } from "@/lib/ai/parse";
 import { formatMoney } from "@/lib/domain/money";
 import { useAppStore } from "@/lib/store/app-store";
 import { BrandIcon } from "@/components/brand-icon";
@@ -489,6 +492,65 @@ export function InboxView() {
   );
   const lastBatch = batches[0];
 
+  const updateDraft = useAppStore((state) => state.updateDraft);
+  const [aiOn, setAiOn] = useState(false);
+  const [categorizing, setCategorizing] = useState(false);
+  useEffect(() => {
+    setAiOn(aiAvailable());
+  }, []);
+
+  // Drafts the rules/brand registry couldn't place — AI's cleanup batch.
+  const uncategorized = useMemo(
+    () =>
+      pending.filter(
+        (draft) =>
+          draft.suggestedType === "expense" &&
+          draft.suggestedCategory === "Other",
+      ),
+    [pending],
+  );
+
+  const categorizeWithAi = async () => {
+    setCategorizing(true);
+    try {
+      const batch = uncategorized.slice(0, 40);
+      const text = await generate(
+        buildCategorizePrompt(batch.map((draft) => draft.description)),
+        { feature: "categorize-drafts", json: true },
+      );
+      const parsed = extractJson<string[]>(text);
+      if (!parsed || !Array.isArray(parsed)) {
+        toast.error("Gemini's answer didn't parse — try again.");
+        return;
+      }
+      let applied = 0;
+      batch.forEach((draft, index) => {
+        const category = parsed[index];
+        if (
+          typeof category === "string" &&
+          category !== "Other" &&
+          (CATEGORIES as readonly string[]).includes(category)
+        ) {
+          updateDraft(draft.id, {
+            suggestedCategory: category as Category,
+          });
+          applied += 1;
+        }
+      });
+      toast.success(
+        applied > 0
+          ? `Categorized ${applied} of ${batch.length} drafts — review before confirming`
+          : "Gemini couldn't improve on these — they stay as Other",
+      );
+    } catch (error) {
+      toast.error(
+        error instanceof AiError ? error.message : "Categorization failed.",
+      );
+    } finally {
+      setCategorizing(false);
+    }
+  };
+
   const confirmAll = () => {
     const count = confirmPendingDrafts();
     if (count > 0) toast.success(`${count} transactions added to your ledger`);
@@ -577,10 +639,25 @@ export function InboxView() {
                   <h2 className="text-[13px] font-medium uppercase tracking-wide text-muted-foreground">
                     Ready to add ({pending.length})
                   </h2>
-                  <Button size="sm" onClick={confirmAll}>
-                    <Check aria-hidden />
-                    Confirm all
-                  </Button>
+                  <div className="flex items-center gap-1.5">
+                    {aiOn && uncategorized.length > 0 && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={categorizing}
+                        onClick={() => void categorizeWithAi()}
+                      >
+                        <Bot aria-hidden />
+                        {categorizing
+                          ? "Categorizing…"
+                          : `Categorize ${uncategorized.length} with AI`}
+                      </Button>
+                    )}
+                    <Button size="sm" onClick={confirmAll}>
+                      <Check aria-hidden />
+                      Confirm all
+                    </Button>
+                  </div>
                 </div>
                 <ul className="flex flex-col gap-2">
                   {pending.map((draft) => (

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import {
   Bell,
+  Bot,
   ChevronRight,
   Download,
   LogOut,
@@ -36,6 +37,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { formatMoney } from "@/lib/domain/money";
+import {
+  clearAiKey,
+  getAiKey,
+  readAiLog,
+  setAiKey,
+} from "@/lib/ai/gemini";
+import { Input } from "@/components/ui/input";
 import { useAppStore } from "@/lib/store/app-store";
 
 const CURRENCIES = ["₹", "$", "€", "£"];
@@ -61,11 +69,31 @@ export function SettingsView() {
   const [remindersSupported, setRemindersSupported] = useState(false);
   const [remindersOn, setRemindersOn] = useState(false);
   const [remindersBusy, setRemindersBusy] = useState(false);
+  const [aiKeyValue, setAiKeyValue] = useState("");
+  const [aiKeySet, setAiKeySet] = useState(false);
+  const [aiCalls, setAiCalls] = useState(0);
 
   useEffect(() => {
     setRemindersSupported(pushSupported());
     void remindersEnabled().then(setRemindersOn);
+    setAiKeySet(Boolean(getAiKey()));
+    setAiCalls(readAiLog().length);
   }, []);
+
+  const saveAiKey = () => {
+    const trimmed = aiKeyValue.trim();
+    if (!trimmed) return;
+    setAiKey(trimmed);
+    setAiKeyValue("");
+    setAiKeySet(true);
+    toast.success("Gemini key saved on this device");
+  };
+
+  const removeAiKey = () => {
+    clearAiKey();
+    setAiKeySet(false);
+    toast("Gemini key removed");
+  };
 
   const toggleReminders = async () => {
     setRemindersBusy(true);
@@ -273,6 +301,60 @@ export function SettingsView() {
           </div>
         </section>
       )}
+
+      <section aria-label="AI" className="flex flex-col gap-3">
+        <h2 className="px-1 text-sm font-medium text-muted-foreground">
+          AI (Gemini)
+        </h2>
+        <div className="flex flex-col gap-3 rounded-2xl border border-border bg-card px-4 py-4 shadow-soft">
+          <div className="flex items-start gap-3">
+            <Bot aria-hidden className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+            <p className="text-[12px] leading-relaxed text-muted-foreground">
+              Powers monthly-review summaries, smarter search, and
+              auto-categorization. Your key stays in this browser only — never
+              in your synced data or backups. Only the minimum needed is sent
+              per feature (aggregate stats or merchant names, never balances
+              or account numbers).
+            </p>
+          </div>
+          {aiKeySet ? (
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-[14px]">
+                Key saved
+                {aiCalls > 0 ? (
+                  <span className="text-muted-foreground">
+                    {" "}
+                    · {aiCalls} recent call{aiCalls === 1 ? "" : "s"}
+                  </span>
+                ) : null}
+              </span>
+              <Button size="sm" variant="outline" onClick={removeAiKey}>
+                Remove key
+              </Button>
+            </div>
+          ) : (
+            <form
+              className="flex items-center gap-2"
+              onSubmit={(event) => {
+                event.preventDefault();
+                saveAiKey();
+              }}
+            >
+              <Input
+                type="password"
+                aria-label="Gemini API key"
+                placeholder="Gemini API key (AIza…)"
+                autoComplete="off"
+                value={aiKeyValue}
+                onChange={(event) => setAiKeyValue(event.target.value)}
+              />
+              <Button type="submit" size="sm" disabled={!aiKeyValue.trim()}>
+                Save
+              </Button>
+            </form>
+          )}
+        </div>
+      </section>
 
       <section aria-label="Data" className="flex flex-col gap-3">
         <h2 className="px-1 text-sm font-medium text-muted-foreground">Data</h2>
