@@ -368,10 +368,25 @@ export const budgetsSchema = z.object({
 });
 export type Budgets = z.infer<typeof budgetsSchema>;
 
+/**
+ * How much Ledger is allowed to do without being asked.
+ *
+ * `off`   — nothing autonomous; computed signals only, zero API calls.
+ * `ambient` — the default. Background jobs may run within a daily ceiling,
+ *             and may write categories onto *drafts*. Never onto money.
+ */
+export const autonomySchema = z.enum(["off", "ambient"]);
+export type Autonomy = z.infer<typeof autonomySchema>;
+
 export const settingsSchema = z.object({
   currency: z.string().min(1),
   tags: z.array(z.string().min(1)).default([]),
   showInvestmentsInExpenses: z.boolean().default(false),
+  // Defaulted rather than required so every existing settings file keeps
+  // parsing. Ambient is the default because the agent is budget-capped and
+  // read-only over confirmed data — the failure mode is a wasted call, not a
+  // wrong number.
+  autonomy: autonomySchema.default("ambient"),
 });
 export type Settings = z.infer<typeof settingsSchema>;
 
@@ -594,6 +609,7 @@ export const DEFAULT_SETTINGS: Settings = {
   currency: "₹",
   tags: [],
   showInvestmentsInExpenses: false,
+  autonomy: "ambient",
 };
 
 export const SPACE_ICONS = [

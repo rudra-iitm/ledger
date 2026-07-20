@@ -5,17 +5,14 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   BarChart3,
-  Bot,
   CalendarClock,
   CalendarDays,
-  Camera,
   CircleUserRound,
   CloudAlert,
   FileText,
   House,
   Inbox,
   LayoutGrid,
-  Lightbulb,
   LogOut,
   Plus,
   ReceiptText,
@@ -27,6 +24,7 @@ import {
   Wallet,
   Handshake,
 } from "lucide-react";
+import { AgentProvider } from "@/components/agent/agent-provider";
 import { AuthGate } from "@/components/auth-gate";
 import { SheetProvider, useSheets } from "@/components/sheets/sheet-context";
 import {
@@ -109,25 +107,6 @@ function Header({ title }: { title: string }) {
               )}
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem asChild>
-                <Link href="/copilot">
-                  <Bot aria-hidden />
-                  Copilot
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link href="/insights">
-                  <Lightbulb aria-hidden />
-                  Insights
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link href="/scan">
-                  <Camera aria-hidden />
-                  Scan a document
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
               <DropdownMenuItem asChild>
                 <Link href="/inbox">
                   <Inbox aria-hidden />
@@ -311,13 +290,15 @@ export function AppShell({
 
   return (
     <AuthGate>
-      <SheetProvider>
-        <Header title={title} />
-        <main className="mx-auto w-full max-w-lg flex-1 px-5 pb-28 pt-6">
-          {children}
-        </main>
-        <TabBar />
-      </SheetProvider>
+      <AgentProvider>
+        <SheetProvider>
+          <Header title={title} />
+          <main className="mx-auto w-full max-w-lg flex-1 px-5 pb-28 pt-6">
+            {children}
+          </main>
+          <TabBar />
+        </SheetProvider>
+      </AgentProvider>
     </AuthGate>
   );
 }
