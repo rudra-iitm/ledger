@@ -67,10 +67,20 @@ export async function extractPdfLines(
     throw error;
   }
   const lines: PdfLine[] = [];
+  let lastPageError: unknown = null;
   try {
     for (let pageNumber = 1; pageNumber <= doc.numPages; pageNumber += 1) {
-      const page = await doc.getPage(pageNumber);
-      const content = await page.getTextContent();
+      let content: Awaited<ReturnType<Awaited<ReturnType<typeof doc.getPage>>["getTextContent"]>>;
+      try {
+        const page = await doc.getPage(pageNumber);
+        content = await page.getTextContent();
+      } catch (error) {
+        // One broken page (bad font, damaged stream) shouldn't sink the
+        // whole statement — parse what the readable pages give us.
+        console.error(`pdf extract: page ${pageNumber} failed`, error);
+        lastPageError = error;
+        continue;
+      }
       const rows = new Map<number, PositionedText[]>();
       for (const item of content.items) {
         if (!isTextItem(item) || !item.str.trim()) continue;
@@ -101,5 +111,6 @@ export async function extractPdfLines(
   } finally {
     await task.destroy();
   }
+  if (lines.length === 0 && lastPageError) throw lastPageError;
   return lines;
 }

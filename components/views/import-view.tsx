@@ -59,6 +59,15 @@ const DEFAULT_MAPPING: CsvMapping = {
   hasHeader: true,
 };
 
+/** Short technical detail for an error toast, so failures are reportable. */
+function describeError(error: unknown): string {
+  const message =
+    error instanceof Error
+      ? `${error.name}: ${error.message}`
+      : String(error);
+  return message.slice(0, 160);
+}
+
 export function ImportView() {
   const accounts = useAppStore((state) => state.data.accounts);
   const currency = useAppStore((state) => state.data.settings.currency);
@@ -109,7 +118,18 @@ export function ImportView() {
       : `Column ${index + 1}`;
 
   const completePdf = (file: File, lines: PdfLine[]): boolean => {
-    const extracted = parseStatementLines(lines);
+    let extracted: ReturnType<typeof parseStatementLines>;
+    try {
+      extracted = parseStatementLines(lines);
+    } catch (error) {
+      // A parser bug on an unseen layout — distinct from "unreadable PDF" so
+      // the report tells us where to look.
+      console.error("statement parser failed", error);
+      toast.error("Ledger's statement parser hit a bug on this layout.", {
+        description: describeError(error),
+      });
+      return false;
+    }
     if (extracted.rows.length === 0) {
       toast.error(
         "Couldn't find transactions in this PDF — it may be a scanned image. Export CSV from your bank instead.",
@@ -151,9 +171,11 @@ export function ImportView() {
         setPasswordError(null);
         setRememberPassword(true);
         setPasswordDialogOpen(true);
-      } catch {
+      } catch (error) {
+        console.error("pdf import failed", error);
         toast.error(
           "Couldn't read this PDF. Try exporting CSV from your bank instead.",
+          { description: describeError(error) },
         );
       } finally {
         setExtracting(false);
@@ -209,8 +231,11 @@ export function ImportView() {
       if (error instanceof PdfPasswordError) {
         setPasswordError("That password didn't unlock this file. Try again.");
       } else {
+        console.error("pdf import failed after unlock", error);
         setPasswordDialogOpen(false);
-        toast.error("Couldn't read this PDF after unlocking. Try CSV instead.");
+        toast.error("Couldn't read this PDF after unlocking. Try CSV instead.", {
+          description: describeError(error),
+        });
       }
     } finally {
       setExtracting(false);
