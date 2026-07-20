@@ -23,6 +23,7 @@ import {
 import {
   collectStatementPasswords,
   parseStatementLines,
+  type PdfLine,
 } from "@/lib/domain/ingest/pdf";
 import { extractPdfLines, PdfPasswordError } from "@/lib/pdf/extract";
 import {
@@ -97,7 +98,7 @@ export function ImportView() {
       ? headers[index].trim()
       : `Column ${index + 1}`;
 
-  const completePdf = (file: File, lines: string[]): boolean => {
+  const completePdf = (file: File, lines: PdfLine[]): boolean => {
     const extracted = parseStatementLines(lines);
     if (extracted.rows.length === 0) {
       toast.error(

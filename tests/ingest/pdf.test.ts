@@ -86,3 +86,58 @@ describe("collectStatementPasswords", () => {
     ]);
   });
 });
+
+describe("numbered debit/credit/balance tables (BoB-style)", () => {
+  // Anonymized replica of the real layout: bilingual headers, serial-numbered
+  // anchors, dash-marked empty columns, descriptions wrapped above/below.
+  const line = (page: number, y: number, text: string) => ({ page, y, text });
+  const lines = [
+    line(1, 780, "Account Statement from 01-07-2026 to 10-07-2026"),
+    line(1, 760, "क.सं लेनदेन की पभाव तारीख ववरण चेक नंबर नामे जमा शेष"),
+    line(1, 748, "Cheque Debit Credit Balance"),
+    line(1, 736, "Sr.No Transaction Value Description"),
+    line(1, 724, "Date Date"),
+    line(1, 700, "1 01-07-2026 Opening Balance - - 50,000.00"),
+    line(1, 689, "UPI/126215190907/12:33:16/UPI/vendor1@axl/U"),
+    line(1, 678, "2 01-07-2026 01-07-2026 450.00 - 49,550.00"),
+    line(1, 667, "PI"),
+    line(1, 656, "IMPS/P2A/619446142209/Some Person/IMPS"),
+    line(1, 645, "3 02-07-2026 02-07-2026 - 10,000.00 59,550.00"),
+    line(1, 634, "transa"),
+    line(1, 623, "UPI/126254921643/08:19:52/UPI/someone2003@"),
+    line(1, 612, "4 03-07-2026 03-07-2026 75.00 - 59,475.00"),
+    line(1, 601, "oks"),
+    line(1, 560, "Page 1 of 2"),
+    line(2, 780, "Account Statement from 01-07-2026 to 10-07-2026"),
+    line(2, 748, "Cheque Debit Credit Balance"),
+    line(2, 700, "UPI/103687132339/14:21:25/UPI/merchant@h"),
+    line(2, 689, "5 04-07-2026 04-07-2026 1,200.00 - 58,275.00"),
+    line(2, 640, "This is a computer-generated statement hence does not require signature."),
+  ];
+
+  it("parses anchors, reattaches wrapped descriptions, and reads dash columns", () => {
+    const { rows } = parseStatementLines(lines);
+    expect(rows).toHaveLength(4);
+    expect(rows[0]).toMatchObject({
+      date: "2026-07-01",
+      amount: 450,
+      direction: "debit",
+      balance: 49550,
+      refNo: "126215190907",
+    });
+    // Wrapped VPA joined without spaces: "...@" + "oks"
+    expect(rows[2].description).toContain("someone2003@oks");
+    expect(rows[1]).toMatchObject({ direction: "credit", amount: 10000 });
+    // Opening-balance row seeds the chain but is not a transaction
+    expect(rows.every((row) => !/opening balance/i.test(row.description))).toBe(true);
+    // Page-2 row unaffected by page-1 geometry
+    expect(rows[3]).toMatchObject({ date: "2026-07-04", amount: 1200, direction: "debit" });
+  });
+
+  it("keeps page chrome out of descriptions", () => {
+    const { rows } = parseStatementLines(lines);
+    for (const row of rows) {
+      expect(row.description).not.toMatch(/page \d|debit credit balance|sr\.no/i);
+    }
+  });
+});

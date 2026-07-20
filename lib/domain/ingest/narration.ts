@@ -112,6 +112,11 @@ export function decodeNarration(rawInput: string): DecodedNarration {
 /** Human title for a decoded row when no better description exists. */
 export function fallbackDescription(decoded: DecodedNarration, raw: string): string {
   if (decoded.counterparty) return decoded.counterparty;
+  // A UPI handle beats the raw narration soup for person-to-person rows.
+  if (decoded.channel === "upi" && decoded.vpa) {
+    const local = decoded.vpa.split("@")[0] ?? "";
+    if (local.length >= 4) return decoded.vpa;
+  }
   switch (decoded.channel) {
     case "atm":
       return "ATM withdrawal";

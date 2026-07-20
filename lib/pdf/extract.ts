@@ -1,9 +1,12 @@
 "use client";
 
+import type { PdfLine } from "@/lib/domain/ingest/pdf";
+
 /**
  * Text extraction from PDF statements via pdf.js (lazy-loaded).
- * Items are grouped into visual lines by their Y coordinate, then ordered
- * left-to-right — the shape lib/domain/ingest/pdf.ts expects.
+ * Items are grouped into visual lines by their Y coordinate, ordered
+ * left-to-right, and returned with their page + Y position so the domain
+ * parser can reattach wrapped table cells to their rows.
  */
 
 interface PositionedText {
@@ -43,7 +46,7 @@ function isPasswordException(
 export async function extractPdfLines(
   data: ArrayBuffer,
   password?: string,
-): Promise<string[]> {
+): Promise<PdfLine[]> {
   const pdfjs = await import("pdfjs-dist");
   pdfjs.GlobalWorkerOptions.workerSrc = new URL(
     "pdfjs-dist/build/pdf.worker.min.mjs",
@@ -63,7 +66,7 @@ export async function extractPdfLines(
     }
     throw error;
   }
-  const lines: string[] = [];
+  const lines: PdfLine[] = [];
   try {
     for (let pageNumber = 1; pageNumber <= doc.numPages; pageNumber += 1) {
       const page = await doc.getPage(pageNumber);
@@ -84,13 +87,15 @@ export async function extractPdfLines(
         rows.set(key, bucket);
       }
       const ordered = [...rows.entries()].sort((a, b) => b[0] - a[0]);
-      for (const [, items] of ordered) {
-        lines.push(
-          items
+      for (const [y, items] of ordered) {
+        lines.push({
+          page: pageNumber,
+          y,
+          text: items
             .sort((a, b) => a.x - b.x)
             .map((item) => item.str)
             .join(" "),
-        );
+        });
       }
     }
   } finally {

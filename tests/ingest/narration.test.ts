@@ -38,3 +38,18 @@ describe("decodeNarration", () => {
     expect(decoded.counterparty?.toLowerCase()).toContain("blinkit");
   });
 });
+
+describe("fallbackDescription", () => {
+  it("prefers a readable VPA for person-to-person UPI rows", async () => {
+    const { decodeNarration, fallbackDescription } = await import(
+      "@/lib/domain/ingest/narration"
+    );
+    const raw = "UPI/126215190907/12:33:16/UPI/9019516561@axl/UPI";
+    const decoded = decodeNarration(raw);
+    expect(fallbackDescription(decoded, raw)).toBe("9019516561@axl");
+    // Truncated wrap artifacts ("...-2@ibl" → localpart "2") stay raw
+    const short = "UPI/126215603135/12:41:02/UPI/8972931514-2@ibl/UP";
+    const decodedShort = decodeNarration(short);
+    expect(fallbackDescription(decodedShort, short)).not.toBe("2@ibl");
+  });
+});
