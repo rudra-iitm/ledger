@@ -47,9 +47,13 @@ export async function extractPdfLines(
   data: ArrayBuffer,
   password?: string,
 ): Promise<PdfLine[]> {
-  const pdfjs = await import("pdfjs-dist");
+  // The legacy build is compiled + polyfilled for older engines. The modern
+  // build assumes APIs like Promise.withResolvers that iOS Safari < 17.4
+  // lacks — on those devices extraction died with
+  // "TypeError: undefined is not a function" after unlocking.
+  const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
   pdfjs.GlobalWorkerOptions.workerSrc = new URL(
-    "pdfjs-dist/build/pdf.worker.min.mjs",
+    "pdfjs-dist/legacy/build/pdf.worker.min.mjs",
     import.meta.url,
   ).toString();
 
