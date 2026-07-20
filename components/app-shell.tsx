@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   BarChart3,
+  Bot,
   CalendarClock,
   CalendarDays,
   CircleUserRound,
@@ -13,6 +14,7 @@ import {
   House,
   Inbox,
   LayoutGrid,
+  Lightbulb,
   LogOut,
   Plus,
   ReceiptText,
@@ -105,6 +107,19 @@ function Header({ title }: { title: string }) {
               )}
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
+              <DropdownMenuItem asChild>
+                <Link href="/copilot">
+                  <Bot aria-hidden />
+                  Copilot
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href="/insights">
+                  <Lightbulb aria-hidden />
+                  Insights
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
               <DropdownMenuItem asChild>
                 <Link href="/inbox">
                   <Inbox aria-hidden />
