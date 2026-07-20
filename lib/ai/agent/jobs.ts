@@ -20,11 +20,12 @@
  */
 
 import { hashKey } from "../cache";
-import { categorizeDrafts, needsCategorizing } from "../features/categorize";
+import { categorizeDrafts, needsCategorizing, ruleCandidates } from "../features/categorize";
 import { buildBriefing, findInsights } from "../features/advisor";
 import type { Suggestion } from "../features/categorize";
 import { currentMonth, todayISO } from "@/lib/domain/dates";
 import { monthExpenses } from "@/lib/domain/budget";
+import type { Category } from "@/lib/domain/types";
 import type { LedgerData } from "@/lib/storage/repository";
 import type { DraftSignal } from "./types";
 
@@ -32,6 +33,11 @@ import type { DraftSignal } from "./types";
 export interface AgentActions {
   /** Write categories onto pending drafts. Returns how many landed. */
   applyCategorySuggestions(suggestions: Suggestion[]): number;
+  /**
+   * Teach the deterministic layer what the model just worked out.
+   * Returns false when a rule for that merchant already exists.
+   */
+  learnRule(text: string, category: Category): boolean;
 }
 
 export interface JobContext {
@@ -108,16 +114,46 @@ export const categorizeJob: AgentJob = {
       return { signals: [], note: `Categorise: nothing confident of ${considered}` };
     }
 
+    /*
+     * The learning loop, closed.
+     *
+     * A merchant the model placed the same way twice, both times with high
+     * confidence, becomes a rule. This used to be a toast offering to create
+     * one, which meant the app knew the answer and asked the user to press a
+     * button to write it down. Rules stay inspectable, editable and
+     * exportable on the Rules screen — nothing is learned that the user can't
+     * see and undo — but they no longer have to be typed.
+     *
+     * The payoff compounds: every rule written here is a merchant that never
+     * needs a model call again.
+     */
+    const learned: string[] = [];
+    for (const candidate of ruleCandidates(suggestions)) {
+      if (actions.learnRule(candidate.text, candidate.category)) {
+        learned.push(`${candidate.text} → ${candidate.category}`);
+      }
+    }
+
+    const body = learned.length
+      ? `Imported rows now have categories, and ${learned.length} merchant${
+          learned.length === 1 ? "" : "s"
+        } will sort ${learned.length === 1 ? "itself" : "themselves"} from now on.`
+      : "Imported rows that had no category now have one. Review before confirming.";
+
     return {
-      note: `Categorise: ${applied} of ${considered} placed, ${unsure} unsure`,
+      note:
+        `Categorise: ${applied} of ${considered} placed, ${unsure} unsure` +
+        (learned.length ? `, ${learned.length} rule(s) learned` : ""),
       signals: [
         {
           id: `inbox:categorized:${todayISO()}`,
           kind: "inbox",
           severity: "info",
           title: `${applied} sorted for you`,
-          body: `Imported rows that had no category now have one. Review before confirming.`,
-          evidence: `${applied} of ${considered} placed; ${unsure} left as Other.`,
+          body,
+          evidence:
+            `${applied} of ${considered} placed; ${unsure} left as Other.` +
+            (learned.length ? ` Rules learned: ${learned.join(", ")}.` : ""),
           href: "/inbox",
           source: "model",
           daysAway: 0,

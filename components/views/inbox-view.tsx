@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
-import { Bot, Check, FileUp, Inbox, Plus, Trash2, X } from "lucide-react";
+import { Check, FileUp, Inbox, Plus, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -31,13 +31,6 @@ import {
   type RecurringSuggestion,
 } from "@/lib/domain/ingest/recurrence";
 import { detectAnomalies, type FinanceAlert } from "@/lib/domain/anomalies";
-import { aiAvailable } from "@/lib/ai/gemini";
-import { AiError } from "@/lib/ai/provider";
-import {
-  categorizeDrafts,
-  needsCategorizing,
-  ruleCandidates,
-} from "@/lib/ai/features/categorize";
 import { formatMoney } from "@/lib/domain/money";
 import { useAppStore } from "@/lib/store/app-store";
 import { BrandIcon } from "@/components/brand-icon";
@@ -48,9 +41,9 @@ const NONE = "__none__";
 function DraftRow({ draft }: { draft: DraftTransaction }) {
   const currency = useAppStore((state) => state.data.settings.currency);
   const accounts = useAppStore((state) => state.data.accounts);
-  const updateDraft = useAppStore((state) => state.updateDraft);
   const confirmDraft = useAppStore((state) => state.confirmDraft);
   const rejectDraft = useAppStore((state) => state.rejectDraft);
+  const updateDraft = useAppStore((state) => state.updateDraft);
   const account = accounts.find((item) => item.id === draft.accountId);
   const isCredit = draft.direction === "credit";
 
@@ -496,68 +489,6 @@ export function InboxView() {
   );
   const lastBatch = batches[0];
 
-  const updateDraft = useAppStore((state) => state.updateDraft);
-  const rules = useAppStore((state) => state.data.rules);
-  const addRule = useAppStore((state) => state.addRule);
-  const [aiOn, setAiOn] = useState(false);
-  const [categorizing, setCategorizing] = useState(false);
-  useEffect(() => {
-    setAiOn(aiAvailable());
-  }, []);
-
-  // Drafts the rules/brand registry couldn't place — AI's cleanup batch.
-  const uncategorized = useMemo(() => needsCategorizing(pending), [pending]);
-
-  const categorizeWithAi = async () => {
-    setCategorizing(true);
-    try {
-      const { suggestions, considered, unsure } = await categorizeDrafts({
-        drafts: pending,
-        expenses,
-        rules,
-      });
-      for (const suggestion of suggestions) {
-        updateDraft(suggestion.draftId, { suggestedCategory: suggestion.category });
-      }
-
-      if (suggestions.length === 0) {
-        toast("Nothing confidently recognised — these stay as Other");
-        return;
-      }
-      toast.success(
-        `Categorized ${suggestions.length} of ${considered} — review before confirming` +
-          (unsure > 0 ? ` · ${unsure} left as Other` : ""),
-      );
-
-      // A merchant the model placed the same way more than once is a rule
-      // waiting to be written; offer it so the next import needs no AI at all.
-      const [candidate] = ruleCandidates(suggestions);
-      if (candidate) {
-        toast(`"${candidate.text}" looks like ${candidate.category} every time`, {
-          duration: 8000,
-          action: {
-            label: "Create rule",
-            onClick: () => {
-              addRule({
-                name: `${candidate.text} → ${candidate.category}`,
-                enabled: true,
-                match: { text: candidate.text },
-                actions: { category: candidate.category, tags: [] },
-              });
-              toast.success("Rule created — future imports categorize themselves");
-            },
-          },
-        });
-      }
-    } catch (error) {
-      toast.error(
-        error instanceof AiError ? error.message : "Categorization failed.",
-      );
-    } finally {
-      setCategorizing(false);
-    }
-  };
-
   const confirmAll = () => {
     const count = confirmPendingDrafts();
     if (count > 0) toast.success(`${count} transactions added to your ledger`);
@@ -646,25 +577,16 @@ export function InboxView() {
                   <h2 className="text-[13px] font-medium uppercase tracking-wide text-muted-foreground">
                     Ready to add ({pending.length})
                   </h2>
-                  <div className="flex items-center gap-1.5">
-                    {aiOn && uncategorized.length > 0 && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        disabled={categorizing}
-                        onClick={() => void categorizeWithAi()}
-                      >
-                        <Bot aria-hidden />
-                        {categorizing
-                          ? "Categorizing…"
-                          : `Categorize ${uncategorized.length} with AI`}
-                      </Button>
-                    )}
-                    <Button size="sm" onClick={confirmAll}>
-                      <Check aria-hidden />
-                      Confirm all
-                    </Button>
-                  </div>
+                  {/*
+                    There was a "Categorize N with AI" button here. The agent
+                    now does this on import, before the user ever opens this
+                    screen — a button that says "do the thing you were going
+                    to do anyway" is just a chore with a nicer label.
+                  */}
+                  <Button size="sm" onClick={confirmAll}>
+                    <Check aria-hidden />
+                    Confirm all
+                  </Button>
                 </div>
                 <ul className="flex flex-col gap-2">
                   {pending.map((draft) => (

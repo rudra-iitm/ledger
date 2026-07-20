@@ -48,6 +48,7 @@ export function AgentProvider({ children }: { children: React.ReactNode }) {
   const ready = useAppStore((state) => state.status === "ready");
   const autonomy = useAppStore((state) => state.data.settings.autonomy);
   const updateDraft = useAppStore((state) => state.updateDraft);
+  const addRule = useAppStore((state) => state.addRule);
   const dismissAlert = useAppStore((state) => state.dismissAlert);
 
   const [dismissed, setDismissed] = useState<string[]>([]);
@@ -76,8 +77,23 @@ export function AgentProvider({ children }: { children: React.ReactNode }) {
         }
         return applied;
       },
+      learnRule: (text, category) => {
+        // Read through the ref, not the closure: several rules can be learned
+        // in one pass and each needs to see the ones before it.
+        const existing = dataRef.current.rules.some(
+          (rule) => rule.match.text?.toLowerCase() === text.toLowerCase(),
+        );
+        if (existing) return false;
+        addRule({
+          name: `${text} → ${category}`,
+          enabled: true,
+          match: { text },
+          actions: { category, tags: [] },
+        });
+        return true;
+      },
     }),
-    [updateDraft],
+    [updateDraft, addRule],
   );
 
   useEffect(() => {

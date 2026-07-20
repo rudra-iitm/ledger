@@ -2,12 +2,11 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowRight, Bot, ListFilter, Search, Users } from "lucide-react";
-import { toast } from "sonner";
+import { ArrowRight, ListFilter, Search, Users } from "lucide-react";
 import { CategoryIcon } from "@/components/category-icon";
 import { interpretSearch } from "@/lib/domain/smart-search";
 import { aiAvailable } from "@/lib/ai/gemini";
-import { AiError, generate } from "@/lib/ai/client";
+import { generate } from "@/lib/ai/client";
 import { buildFilterPrompt } from "@/lib/ai/prompts";
 import { extractJson } from "@/lib/ai/parse";
 import { TIME_PRESETS, type TimePreset } from "@/lib/domain/time-ranges";
@@ -61,7 +60,14 @@ export function SearchSheet({
 
   const smartQuery = useMemo(() => interpretSearch(query), [query]);
   const [aiOn, setAiOn] = useState(false);
-  const [asking, setAsking] = useState(false);
+  /** Held only to keep concurrent fallbacks from overlapping. */
+  const [, setAsking] = useState(false);
+  /** Filters the model compiled from a question the grammar couldn't parse. */
+  const [aiFilters, setAiFilters] = useState<{
+    category: Category | null;
+    preset: TimePreset | null;
+    query: string;
+  } | null>(null);
 
   useEffect(() => {
     setAiOn(aiAvailable());
@@ -85,8 +91,18 @@ export function SearchSheet({
     openFilters(smartQuery);
   };
 
-  // AI fallback when the deterministic interpreter finds no structure —
-  // only the question text is sent, never any ledger data.
+  /**
+   * AI fallback when the deterministic interpreter finds no structure.
+   *
+   * Runs itself. The old version of this was a row labelled "Ask AI: <query>"
+   * that the user had to notice and tap — which asked them to know which of
+   * their own questions our grammar could parse. Now the grammar tries first,
+   * and when it comes up empty this fires on a debounce and produces the same
+   * "Show expenses: …" row the deterministic path produces. The user sees one
+   * kind of answer, not two, and never learns the word "fallback".
+   *
+   * Only the question text is sent — never any ledger data.
+   */
   const askAi = async () => {
     setAsking(true);
     try {
@@ -111,29 +127,39 @@ export function SearchSheet({
         preset?: string | null;
         query?: string;
       }>(text);
-      if (!parsed) {
-        toast.error("Couldn't understand that — try rephrasing.");
-        return;
-      }
+      if (!parsed) return;
       const category = CATEGORIES.includes(parsed.category as Category)
         ? (parsed.category as Category)
         : null;
       const preset = TIME_PRESETS.includes(parsed.preset as TimePreset)
         ? (parsed.preset as TimePreset)
         : null;
-      if (!category && !preset && !parsed.query) {
-        toast.error("Couldn't turn that into a filter — try rephrasing.");
-        return;
-      }
-      openFilters({ category, preset, query: parsed.query ?? "" });
-    } catch (error) {
-      toast.error(
-        error instanceof AiError ? error.message : "AI search failed.",
-      );
+      if (!category && !preset && !parsed.query) return;
+      setAiFilters({ category, preset, query: parsed.query ?? "" });
+    } catch {
+      // Silent. The user typed a search, not a request for a model call —
+      // a failure here just means the sheet shows what it already had.
     } finally {
       setAsking(false);
     }
   };
+
+  /**
+   * Fire the fallback when the local search has nothing and the query reads
+   * like a question. Debounced past typing speed so a word-by-word query
+   * costs one call, not six.
+   */
+  useEffect(() => {
+    setAiFilters(null);
+    if (!open || !aiOn || smartQuery) return;
+    if (trimmed.split(/\s+/).filter(Boolean).length < 2) return;
+    if (matchingExpenses.length > 0 || matchingCategories.length > 0) return;
+
+    const timer = window.setTimeout(() => void askAi(), 600);
+    return () => window.clearTimeout(timer);
+    // askAi closes over `query` only, which `trimmed` already tracks.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, aiOn, smartQuery, trimmed, matchingExpenses.length, matchingCategories.length]);
 
   const noResults =
     trimmed.length > 0 &&
@@ -183,21 +209,27 @@ export function SearchSheet({
               <ArrowRight aria-hidden className="size-4 shrink-0 text-muted-foreground" />
             </button>
           )}
-          {!smartQuery && aiOn && trimmed.split(/\s+/).length >= 2 && (
+          {/*
+            Same row, same words, whether the grammar or the model produced
+            the filters. The user asked a question and got an answer; which
+            engine understood it is our problem, not theirs.
+          */}
+          {!smartQuery && aiFilters && (
             <button
               type="button"
-              disabled={asking}
-              onClick={() => void askAi()}
-              className="flex items-center gap-3 rounded-2xl border border-border bg-card px-4 py-3 text-left shadow-soft outline-none transition-colors hover:bg-accent/50 focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60"
+              onClick={() => openFilters(aiFilters)}
+              className="flex items-center gap-3 rounded-2xl border border-border bg-card px-4 py-3 text-left shadow-soft outline-none transition-colors hover:bg-accent/50 focus-visible:ring-2 focus-visible:ring-ring"
             >
-              <Bot aria-hidden className="size-4 shrink-0 text-muted-foreground" />
+              <ListFilter aria-hidden className="size-4 shrink-0 text-muted-foreground" />
               <span className="flex min-w-0 flex-1 flex-col">
                 <span className="text-[14px] font-medium">
-                  {asking ? "Asking Gemini…" : `Ask AI: “${query.trim()}”`}
+                  Show expenses:{" "}
+                  {[aiFilters.category, aiFilters.preset, aiFilters.query]
+                    .filter(Boolean)
+                    .join(" · ")}
                 </span>
                 <span className="text-[12px] text-muted-foreground">
-                  Turns your question into expense filters — only the question
-                  is sent
+                  Opens the list with these filters applied
                 </span>
               </span>
               <ArrowRight aria-hidden className="size-4 shrink-0 text-muted-foreground" />
