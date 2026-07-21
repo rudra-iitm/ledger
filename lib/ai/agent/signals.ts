@@ -18,6 +18,8 @@ import { budgetSummary, categoryBudgetSummaries } from "@/lib/domain/budget";
 import { currentMonth, formatDisplayDate } from "@/lib/domain/dates";
 import { projectCashFlow } from "@/lib/domain/forecast";
 import { mineRecurring } from "@/lib/domain/ingest/recurrence";
+import { buildPortfolio } from "@/lib/domain/investments";
+import { concentration, priceCoverage } from "@/lib/domain/wealth";
 import { formatMoney } from "@/lib/domain/money";
 import { daysUntil, upcomingRenewals } from "@/lib/domain/subscriptions";
 import type { LedgerData } from "@/lib/storage/repository";
@@ -302,6 +304,78 @@ function recurringSignals(data: LedgerData, now: Date): DraftSignal[] {
 }
 
 /* ------------------------------------------------------------------ */
+/* Wealth — shape of the portfolio, not its performance                */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Two things about a portfolio are worth interrupting someone for, and
+ * neither is its return.
+ *
+ * The first is **concentration**: most people don't know that one fund quietly
+ * became two-thirds of their money. The second is **how much of the number is
+ * real** — an unpriced holding is carried at cost, so a portfolio that has
+ * never been priced shows a serene 0% gain that is really "we have no idea".
+ *
+ * Both are descriptive. Neither tells anyone to buy or sell anything: Ledger
+ * is not a licensed adviser and must never read like one.
+ */
+function wealthSignals(data: LedgerData): DraftSignal[] {
+  const portfolio = buildPortfolio(data.accounts, data.expenses);
+  // Below this, share percentages are noise about pocket change.
+  if (portfolio.currentValue < 1000 || portfolio.holdings.length === 0) return [];
+
+  const currency = data.settings.currency;
+  const signals: DraftSignal[] = [];
+
+  const risk = concentration(portfolio);
+  // 40% in one holding is the threshold where "concentrated" stops being a
+  // style and starts being a fact worth knowing. Needs 2+ holdings: a
+  // one-holding portfolio is 100% concentrated by definition, and saying so
+  // is pedantry, not insight.
+  if (risk.topHolding && risk.topHoldingShare >= 0.4 && portfolio.holdings.length > 1) {
+    const share = Math.round(risk.topHoldingShare * 100);
+    signals.push({
+      id: `wealth:concentration:${risk.topHolding.account.id}:${Math.round(share / 5) * 5}`,
+      kind: "wealth",
+      severity: risk.topHoldingShare >= 0.6 ? "warn" : "info",
+      title: `${share}% is in one holding`,
+      body: `${risk.topHolding.account.name} is ${share}% of your portfolio.`,
+      evidence: `${risk.topHolding.account.name}: ${formatMoney(
+        risk.topHolding.currentValue,
+        currency,
+      )} of ${formatMoney(portfolio.currentValue, currency)} across ${
+        portfolio.holdings.length
+      } holdings (effectively ${risk.effectiveHoldings.toFixed(1)}).`,
+      href: "/investments",
+      source: "computed",
+      daysAway: 0,
+      dismissible: true,
+    });
+  }
+
+  const coverage = priceCoverage(portfolio);
+  if (coverage.pricedShare < 0.75 && coverage.unpricedValue > 0) {
+    const share = Math.round((1 - coverage.pricedShare) * 100);
+    signals.push({
+      id: `wealth:unpriced:${Math.round(share / 10) * 10}`,
+      kind: "wealth",
+      severity: "info",
+      title: "Returns are part guesswork",
+      body: `${share}% of your portfolio has no live price, so it's counted at what you paid.`,
+      evidence: `${formatMoney(coverage.unpricedValue, currency)} unpriced across ${
+        coverage.unpricedAccounts.length
+      } holding(s): ${coverage.unpricedAccounts.map((account) => account.name).join(", ")}.`,
+      href: "/investments",
+      source: "computed",
+      daysAway: 0,
+      dismissible: true,
+    });
+  }
+
+  return signals;
+}
+
+/* ------------------------------------------------------------------ */
 /* Assembly                                                           */
 /* ------------------------------------------------------------------ */
 
@@ -327,6 +401,7 @@ export function buildComputedSignals(context: SignalContext): Signal[] {
     ...anomalySignals(context.data, now),
     ...renewalSignals(context.data, now),
     ...recurringSignals(context.data, now),
+    ...wealthSignals(context.data),
     ...inboxSignals(context.data),
   ].filter((signal) => !(signal.dismissible && dismissed.has(signal.id)));
 

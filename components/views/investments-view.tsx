@@ -13,6 +13,7 @@ import {
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/empty-state";
+import { WealthOverview } from "@/components/wealth/wealth-overview";
 import { ExpenseRow } from "@/components/expense-row";
 import { isInvestment } from "@/lib/domain/transactions";
 import { useSheets } from "@/components/sheets/sheet-context";
@@ -84,53 +85,29 @@ export function InvestmentsView() {
     [expenses],
   );
 
-  const hasGain = portfolio.holdings.some(
-    (holding) => holding.account.currentPrice !== undefined,
-  );
-
   return (
     <div className="flex flex-col gap-6">
-      <section
-        aria-label="Portfolio"
-        className="rounded-2xl border border-border bg-card px-5 py-5 shadow-soft"
-      >
-        <p className="text-[13px] text-muted-foreground">
-          {hasGain ? "Current value" : "Total invested"}
-        </p>
-        <p className="mt-1 text-3xl font-semibold tabular-nums">
-          {formatMoney(
-            hasGain ? portfolio.currentValue : portfolio.invested,
-            currency,
-          )}
-        </p>
-        {hasGain && (
-          <p className="mt-1 text-[13px] text-muted-foreground">
-            Invested {formatMoney(portfolio.invested, currency)} ·{" "}
-            <span
-              className={cn(
-                "font-medium",
-                portfolio.gain >= 0 ? "text-emerald-500" : "text-destructive",
-              )}
-            >
-              {portfolio.gain >= 0 ? "+" : ""}
-              {formatMoney(portfolio.gain, currency)} ({portfolio.gainPercent}%)
-            </span>
-          </p>
-        )}
-        <div className="mt-4 flex gap-2">
-          <Button className="flex-1" onClick={() => sheets.openInvestment()}>
-            <Plus aria-hidden />
-            Invest
-          </Button>
-          <Button
-            variant="outline"
-            className="flex-1"
-            onClick={() => sheets.openRecurringInvestment()}
-          >
-            <CalendarClock aria-hidden />
-            Recurring
-          </Button>
-        </div>
+      <WealthOverview />
+
+      {/*
+        Actions only. The portfolio's value moved into WealthOverview above —
+        this screen used to open with two competing hero figures ("Net worth"
+        and "Current value"), which left neither of them being the answer to
+        "how am I doing".
+      */}
+      <section aria-label="Portfolio actions" className="flex gap-2">
+        <Button className="flex-1" onClick={() => sheets.openInvestment()}>
+          <Plus aria-hidden />
+          Invest
+        </Button>
+        <Button
+          variant="outline"
+          className="flex-1"
+          onClick={() => sheets.openRecurringInvestment()}
+        >
+          <CalendarClock aria-hidden />
+          Recurring
+        </Button>
       </section>
 
       <section aria-label="Holdings">

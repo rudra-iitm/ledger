@@ -28,6 +28,7 @@ export type SignalKind =
   | "inbox"
   | "recurring"
   | "insight"
+  | "wealth"
   | "brief";
 
 /**
